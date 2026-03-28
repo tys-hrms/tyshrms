@@ -1,0 +1,255 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-surface-900 text-white font-sans antialiased;
+    overscroll-behavior: none;
+  }
+
+  input, button, select, textarea {
+    @apply outline-none;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl;
+  }
+
+  .glass-card-dark {
+    @apply bg-surface-800/80 backdrop-blur-md border border-surface-700/50 rounded-2xl;
+  }
+
+  .btn-primary {
+    @apply bg-brand-500 hover:bg-brand-600 active:bg-brand-700 text-white font-semibold 
+           py-3 px-6 rounded-xl transition-all duration-200 active:scale-95 
+           shadow-lg shadow-brand-500/20 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply bg-surface-700 hover:bg-surface-600 active:bg-surface-500 text-white font-semibold 
+           py-3 px-6 rounded-xl transition-all duration-200 active:scale-95 
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-success {
+    @apply bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white font-bold 
+           py-4 px-8 rounded-2xl transition-all duration-200 active:scale-95 
+           shadow-lg shadow-emerald-500/30;
+  }
+
+  .btn-danger {
+    @apply bg-red-500 hover:bg-red-600 active:bg-red-700 text-white font-bold 
+           py-4 px-8 rounded-2xl transition-all duration-200 active:scale-95 
+           shadow-lg shadow-red-500/30;
+  }
+
+  .input-field {
+    @apply w-full bg-surface-800 border border-surface-600 text-white placeholder-surface-400
+           rounded-xl px-4 py-3 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 
+           transition-colors duration-200;
+  }
+
+  .select-field {
+    @apply w-full bg-surface-800 border border-surface-600 text-white
+           rounded-xl px-4 py-3 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 
+           transition-colors duration-200 appearance-none;
+  }
+
+  .pin-dot {
+    @apply w-4 h-4 rounded-full border-2 border-brand-400 transition-all duration-200;
+  }
+
+  .pin-dot-filled {
+    @apply bg-brand-400 border-brand-400;
+  }
+
+  .nav-item {
+    @apply flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all duration-200
+           text-surface-400 hover:text-white active:scale-95;
+  }
+
+  .nav-item-active {
+    @apply text-brand-400 bg-brand-500/10;
+  }
+
+  .stat-card {
+    @apply glass-card p-4 flex flex-col gap-2;
+  }
+
+  .badge {
+    @apply px-2.5 py-0.5 rounded-full text-xs font-semibold;
+  }
+
+  .badge-success {
+    @apply bg-emerald-500/20 text-emerald-400;
+  }
+
+  .badge-warning {
+    @apply bg-amber-500/20 text-amber-400;
+  }
+
+  .badge-danger {
+    @apply bg-red-500/20 text-red-400;
+  }
+
+  .badge-info {
+    @apply bg-brand-500/20 text-brand-400;
+  }
+
+  .badge-neutral {
+    @apply bg-surface-600/50 text-surface-300;
+  }
+
+  .section-header {
+    @apply text-xs font-semibold uppercase tracking-wider text-surface-400 mb-3;
+  }
+
+  .list-item {
+    @apply glass-card-dark p-4 flex items-center gap-3 active:scale-98 transition-all duration-150;
+  }
+}
+
+/* Custom scrollbar for desktop preview */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-surface-600 rounded-full;
+}
+
+/* Animations */
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* Scanner overlay */
+#qr-reader {
+  border: none !important;
+  width: 100% !important;
+}
+#qr-reader video {
+  border-radius: 1rem !important;
+}
+#qr-reader__scan_region {
+  border-radius: 0.5rem;
+}
+
+/* --- Gantt Chart Dark Mode Theme Overrides --- */
+.custom-gantt-dark {
+  /* Override the main wrapper fonts and structural colors */
+}
+
+/* Target the list container and the grid container */
+.custom-gantt-dark ._3_18_,
+.custom-gantt-dark .gantt-table {
+  background-color: transparent !important;
+}
+
+/* Table Headers */
+.custom-gantt-dark .gantt-table-header {
+  background-color: #0f172a !important; /* bg-slate-900 */
+  border-bottom: 2px solid #1e293b !important;
+}
+
+.custom-gantt-dark .gantt-table-headerItem {
+  color: #94a3b8 !important; /* text-slate-400 */
+  border-right: 1px solid #1e293b !important;
+}
+
+/* Table Rows */
+.custom-gantt-dark .gantt-table-row {
+  border-bottom: 1px solid #1e293b !important;
+  transition: background-color 0.2s ease;
+}
+
+.custom-gantt-dark .gantt-table-row:hover {
+  background-color: #1e293b !important;
+}
+
+/* Table Cells */
+.custom-gantt-dark .gantt-table-cell {
+  background-color: transparent !important;
+}
+
+.custom-gantt-dark .gantt-table-cell text,
+.custom-gantt-dark .gantt-table-row ._1z_jG,
+.custom-gantt-dark .gantt-table-row ._2-2M- {
+  fill: #e2e8f0 !important;
+  color: #e2e8f0 !important;
+}
+
+/* SVG Grid Backgrounds */
+.custom-gantt-dark .gantt svg rect[fill="#fff"],
+.custom-gantt-dark .gantt svg rect[fill="#ffffff"] {
+  fill: #0f172a !important; /* replace pure white backgrounds */
+}
+
+/* Alternating Row Colors inside SVG */
+.custom-gantt-dark .gridRow {
+  fill: transparent !important;
+}
+
+.custom-gantt-dark .gridRow:nth-child(even) {
+  fill: #1e293b55 !important;
+}
+
+/* SVG Text elements (axis dates) */
+.custom-gantt-dark .gantt svg text, 
+.custom-gantt-dark text.calendarTopTick, 
+.custom-gantt-dark text.calendarBottomTick {
+  fill: #94a3b8 !important; /* text-slate-400 */
+}
+
+.custom-gantt-dark .gantt svg .barLabel {
+  fill: #ffffff !important;
+  font-weight: 500;
+}
+
+/* SVG Line and Stroke styling (borders of the timeline) */
+.custom-gantt-dark .gridRowLine, 
+.custom-gantt-dark .gridTick, 
+.custom-gantt-dark .calendarBottomTick {
+  stroke: #1e293b !important;
+}
+
+.custom-gantt-dark .calendarTopTick {
+  stroke: #334155 !important;
+}
