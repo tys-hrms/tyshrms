@@ -1,10 +1,12 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import netlify from '@netlify/vite-plugin'
 
 export default defineConfig({
   plugins: [
     react(),
+    netlify(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
@@ -33,14 +35,4 @@ export default defineConfig({
       }
     })
   ],
-  // Proxy /api/* to Vercel dev server during local development
-  // Run: npx vercel dev   (in a separate terminal) to start the API on port 3000
-  server: {
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-      },
-    },
-  },
 })

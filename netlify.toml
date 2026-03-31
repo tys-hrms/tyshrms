@@ -1,0 +1,36 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+# Redirect /api/* to Netlify Functions
+[[redirects]]
+  from = "/api/auth-login-options"
+  to = "/.netlify/functions/auth-login-options"
+  status = 200
+
+[[redirects]]
+  from = "/api/auth-login-verify"
+  to = "/.netlify/functions/auth-login-verify"
+  status = 200
+
+[[redirects]]
+  from = "/api/auth-register-options"
+  to = "/.netlify/functions/auth-register-options"
+  status = 200
+
+[[redirects]]
+  from = "/api/auth-register-verify"
+  to = "/.netlify/functions/auth-register-verify"
+  status = 200
+
+[[redirects]]
+  from = "/api/mongo"
+  to = "/.netlify/functions/mongo"
+  status = 200
+
+# Catch-all for SPA routing
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
