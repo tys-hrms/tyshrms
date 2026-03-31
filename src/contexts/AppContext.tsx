@@ -148,10 +148,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     };
     
-    // Minor delay to ensure everything is initialized
     const timer = setTimeout(performAutoSync, 2000);
     return () => clearTimeout(timer);
-  }, [settings.mongodb.isEnabled, products, assignments]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [settings.mongodb.isEnabled]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // --- Silent Heartbeat: 5-Second Background Polling ---
+  useEffect(() => {
+    if (!settings.mongodb.isEnabled) return;
+    
+    const pollCloudData = async () => {
+      try {
+        const [cLogs, cNotifications, cAssignments] = await Promise.all([
+          db.getAll<WorkLog>('worklogs'),
+          db.getAll<Notification>('notifications'),
+          db.getAll<Assignment>('assignments')
+        ]);
+        
+        // Silent update (only if data actually changed)
+        if (cLogs.length) setWorkLogs(cLogs);
+        if (cNotifications.length) setNotifications(cNotifications);
+        if (cAssignments.length) setAssignments(cAssignments);
+      } catch (e) {
+        console.warn('[Heartbeat] Sync failed (silent):', e);
+      }
+    };
+
+    const intervalId = setInterval(pollCloudData, 5000);
+    return () => clearInterval(intervalId);
+  }, [settings.mongodb.isEnabled]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- Cloud Sync: Initial Load ---
   useEffect(() => {
@@ -187,14 +211,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addProduct = (p: Omit<Product, 'id' | 'createdAt'>) => {
-    const newProduct: Product = { ...p, id: generateId(), createdAt: new Date().toISOString() };
+    const newProduct: Product = { ...p, id: generateId(), createdAt: new Date().toISOString(), inventory: p.inventory || 0 };
     setProducts(prev => [...prev, newProduct]);
     if (settings.mongodb.isEnabled) db.save('products', newProduct).then(() => setProducts(prev => prev.map(pr => pr.id === newProduct.id ? { ...pr, mongoSynced: true } : pr)));
   };
 
   const addProducts = async (pArray: Omit<Product, 'id' | 'createdAt'>[]) => {
     const now = new Date().toISOString();
-    const newProducts = pArray.map(p => ({ ...p, id: generateId(), createdAt: now, mongoSynced: false }));
+    const newProducts = pArray.map(p => ({ ...p, id: generateId(), createdAt: now, mongoSynced: false, inventory: p.inventory || 0 }));
     setProducts(prev => [...prev, ...newProducts]);
     if (settings.mongodb.isEnabled) {
       await db.request('insertMany', 'products', { documents: newProducts });

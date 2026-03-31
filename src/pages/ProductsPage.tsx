@@ -30,6 +30,7 @@ export default function ProductsPage() {
     sku: '',
     title: '',
     unit: 'Piece',
+    inventory: 0,
     imageUrl: '',
   });
 
@@ -88,7 +89,7 @@ export default function ProductsPage() {
     
     addProduct(formData);
     setIsAdding(false);
-    setFormData({ sku: '', title: '', unit: 'Piece', imageUrl: '' });
+    setFormData({ sku: '', title: '', unit: 'Piece', inventory: 0, imageUrl: '' });
   };
 
   const handleSync = async () => {
@@ -156,6 +157,7 @@ export default function ProductsPage() {
       const skuIdx = headers.findIndex(h => h === 'variant sku' || h === 'sku');
       const titleIdx = headers.findIndex(h => h === 'title' || h === 'name');
       const imgIdx = headers.findIndex(h => h === 'variant image' || h === 'image src');
+      const invIdx = headers.findIndex(h => h === 'inventory' || h === 'stock' || h === 'variant inventory qty' || h === 'qty');
 
       if (skuIdx === -1 || titleIdx === -1) {
         setSyncError('Invalid CSV format. Could not find SKU or Title columns.');
@@ -178,6 +180,7 @@ export default function ProductsPage() {
               sku,
               title,
               unit: 'Piece',
+              inventory: invIdx !== -1 ? parseInt(row[invIdx]?.replace(/^"|"$/g, '') || '0', 10) : 0,
               imageUrl: imageUrl || undefined,
             });
           }
@@ -339,6 +342,16 @@ export default function ProductsPage() {
                 <option value="Set">Set</option>
               </select>
             </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Initial Stock (Pieces)</label>
+              <input 
+                type="number" 
+                min="0"
+                value={formData.inventory} 
+                onChange={e => setFormData({...formData, inventory: parseInt(e.target.value || '0', 10)})} 
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:border-custom-blue outline-none" 
+              />
+            </div>
             <div className="lg:col-span-4">
               <label className="block text-sm font-medium text-slate-300 mb-2">Image (Optional)</label>
 
@@ -450,6 +463,7 @@ export default function ProductsPage() {
                     {sortConfig?.key === 'title' && (sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
                   </div>
                 </th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Pieces</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Unit</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Source</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Actions</th>
@@ -469,6 +483,7 @@ export default function ProductsPage() {
                   </td>
                   <td className="px-6 py-3 text-sm font-mono font-medium text-custom-blue">{product.sku}</td>
                   <td className="px-6 py-3 text-sm font-semibold text-white">{product.title}</td>
+                  <td className="px-6 py-3 text-sm font-bold text-teal-400">{product.inventory || 0}</td>
                   <td className="px-6 py-3 text-sm text-slate-400">{product.unit}</td>
                   <td className="px-6 py-3">
                     {product.shopifyProductId ? (

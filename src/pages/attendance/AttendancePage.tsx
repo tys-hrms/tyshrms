@@ -84,12 +84,8 @@ export default function AttendancePage() {
                             <span className="text-sm text-white font-medium mb-1">
                               {new Date(record.clockIn).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                             </span>
-                            <span className="inline-flex items-center text-[10px] uppercase font-bold tracking-wider text-slate-400">
-                              {record.method === 'geofence' ? (
-                                <><MapPin className="w-3 h-3 mr-1 text-teal-400" /> Geofence</>
-                              ) : (
-                                <><CheckCircle2 className="w-3 h-3 mr-1 text-blue-400" /> Manual</>
-                              )}
+                            <span className="inline-flex items-center text-[10px] uppercase font-bold tracking-wider text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded">
+                              <CheckCircle2 className="w-3 h-3 mr-1" /> Manual
                             </span>
                           </div>
                         ) : (

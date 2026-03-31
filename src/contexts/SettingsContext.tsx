@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { AppSettings, ShopifySettings, MongoSettings, Shift, LeaveAutomationSettings } from '../types';
+import { db } from '../lib/database';
 
 const STORAGE_KEY = 'tys_hrms_settings_v2';
 const STORAGE_KEY_SHIFTS = 'tys_hrms_shifts_v2';
@@ -38,6 +39,7 @@ const DEFAULT_SHIFTS: Shift[] = [];
 interface SettingsContextType {
   settings: AppSettings;
   shifts: Shift[];
+  isLoading: boolean;
   updateShopify: (data: Partial<ShopifySettings>) => void;
   updateMongo: (data: Partial<MongoSettings>) => void;
   updateLeaveAutomation: (data: Partial<LeaveAutomationSettings>) => void;
@@ -74,8 +76,48 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     } catch { return DEFAULT_SHIFTS; }
   });
 
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(settings)); }, [settings]);
   useEffect(() => { localStorage.setItem(STORAGE_KEY_SHIFTS, JSON.stringify(shifts)); }, [shifts]);
+
+  // --- Cloud Initialization ---
+  useEffect(() => {
+    const loadCloudSettings = async () => {
+      // Use a timeout fallback for resilience
+      const timeout = setTimeout(() => {
+        console.warn('[SettingsSync] Timeout: Pulling from cloud took too long.');
+        setIsLoading(false);
+      }, 5000);
+
+      try {
+        const [cSettings, cShifts] = await Promise.all([
+          db.getSingle<AppSettings & { _id?: any }>('app_settings'),
+          db.getAll<Shift>('shifts')
+        ]);
+
+        if (cSettings) {
+          // Merge logic: prefer cloud, but keep local IDs and keys if needed
+          setSettings(prev => ({ 
+            ...prev, 
+            ...cSettings,
+            // Ensure we don't accidentally wipe MongoDB settings if they're coming from cloud
+            mongodb: { ...prev.mongodb, ...cSettings.mongodb }
+          }));
+        }
+
+        if (cShifts.length) setShifts(cShifts);
+
+      } catch (err) {
+        console.error('[SettingsSync] Failed to initialize from cloud:', err);
+      } finally {
+        clearTimeout(timeout);
+        setIsLoading(false);
+      }
+    };
+
+    loadCloudSettings();
+  }, []);
 
   // --- Auto-Purge Legacy Demo Data ---
   useEffect(() => {
@@ -92,23 +134,43 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateShopify = (data: Partial<ShopifySettings>) => {
-    setSettings(prev => ({ ...prev, shopify: { ...prev.shopify, ...data } }));
+    setSettings(prev => {
+      const next = { ...prev, shopify: { ...prev.shopify, ...data } };
+      db.save('app_settings', { ...next, id: 'global_settings' });
+      return next;
+    });
   };
 
   const updateMongo = (data: Partial<MongoSettings>) => {
-    setSettings(prev => ({ ...prev, mongodb: { ...prev.mongodb, ...data } }));
+    setSettings(prev => {
+      const next = { ...prev, mongodb: { ...prev.mongodb, ...data } };
+      db.save('app_settings', { ...next, id: 'global_settings' });
+      return next;
+    });
   };
 
   const updateLeaveAutomation = (data: Partial<LeaveAutomationSettings>) => {
-    setSettings(prev => ({ ...prev, leaveAutomation: { ...prev.leaveAutomation, ...data } }));
+    setSettings(prev => {
+      const next = { ...prev, leaveAutomation: { ...prev.leaveAutomation, ...data } };
+      db.save('app_settings', { ...next, id: 'global_settings' });
+      return next;
+    });
   };
 
   const updateWorkstations = (data: AppSettings['workstations']) => {
-    setSettings(prev => ({ ...prev, workstations: data }));
+    setSettings(prev => {
+      const next = { ...prev, workstations: data };
+      db.save('app_settings', { ...next, id: 'global_settings' });
+      return next;
+    });
   };
 
   const updateLocations = (data: AppSettings['locations']) => {
-    setSettings(prev => ({ ...prev, locations: data }));
+    setSettings(prev => {
+      const next = { ...prev, locations: data };
+      db.save('app_settings', { ...next, id: 'global_settings' });
+      return next;
+    });
   };
 
   const syncShopifyProducts = async (): Promise<{ success: boolean; count?: number; error?: string }> => {
@@ -117,20 +179,30 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   const addShift = (data: Omit<Shift, 'id' | 'createdAt'>) => {
     const shift: Shift = { ...data, id: generateId(), createdAt: new Date().toISOString() };
-    setShifts(prev => [...prev, shift]);
+    setShifts(prev => {
+      const next = [...prev, shift];
+      db.save('shifts', shift);
+      return next;
+    });
   };
 
   const updateShift = (id: string, data: Partial<Shift>) => {
-    setShifts(prev => prev.map(s => s.id === id ? { ...s, ...data } : s));
+    setShifts(prev => {
+      const next = prev.map(s => s.id === id ? { ...s, ...data } : s);
+      const updated = next.find(s => s.id === id);
+      if (updated) db.save('shifts', updated);
+      return next;
+    });
   };
 
   const deleteShift = (id: string) => {
     setShifts(prev => prev.filter(s => s.id !== id));
+    db.delete('shifts', id);
   };
 
   return (
     <SettingsContext.Provider value={{
-      settings, shifts,
+      settings, shifts, isLoading,
       updateShopify, updateMongo, updateLeaveAutomation, updateWorkstations, updateLocations,
       syncShopifyProducts,
       addShift, updateShift, deleteShift,

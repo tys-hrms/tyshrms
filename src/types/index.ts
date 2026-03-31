@@ -66,6 +66,10 @@ export interface RolePermission {
   createScope: PermissionScope;
   editScope: PermissionScope;
   deleteScope: PermissionScope;
+  features?: {
+    biometricAllowed?: boolean;
+    // can add more here like: mobileAccess?: boolean;
+  };
 }
 
 // ─── Tasks ─────────────────────────────────────────────────────────────────
@@ -91,6 +95,7 @@ export interface Product {
   barcode?: string;
   imageUrl?: string;
   unit: string;
+  inventory?: number;      // Current stock level (Pieces)
   shopifyProductId?: string;
   shopifyVariantId?: string;
   syncedAt?: string;
@@ -159,7 +164,7 @@ export interface DefectReason {
 
 // ─── Attendance ────────────────────────────────────────────────────────────
 
-export type AttendanceMethod = 'manual' | 'geofence' | 'auto';
+export type AttendanceMethod = 'manual' | 'auto';
 
 export interface AttendanceLog {
   id: string;

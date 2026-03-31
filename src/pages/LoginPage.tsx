@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
-import { Package, Lock, ChevronRight, Delete, Fingerprint } from 'lucide-react';
+import { Package, Lock, ChevronRight, Delete, Fingerprint, MapPin, Loader2, XCircle } from 'lucide-react';
 
 export default function LoginPage() {
   const { login, clockIn, loginBiometric, users } = useAuth();
@@ -9,6 +9,7 @@ export default function LoginPage() {
 
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
   const [shake, setShake] = useState(false);
   const [biometricsSupported, setBiometricsSupported] = useState(false);
   const maxPin = 6;
@@ -19,11 +20,20 @@ export default function LoginPage() {
     }
   }, []);
 
+
   const handleBiometricLogin = async () => {
     setError('');
-    const res = await loginBiometric();
-    if (!res.success) {
-      setError(res.error || 'Biometric login failed');
+    setIsVerifying(true);
+    
+    try {
+      const res = await loginBiometric();
+      if (!res.success) {
+        setError(res.error || 'Biometric login failed');
+      }
+    } catch (err) {
+      setError('An unexpected error occurred during biometric login');
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -31,8 +41,6 @@ export default function LoginPage() {
   const handleLogin = async (currentPin: string) => {
     setError('');
     
-    // 1. Pre-fetch user to determine if we need a geofence check
-    // Let's rely on standard logic but just look through the users array natively.
     const user = users.find(u => u.pinCode === currentPin);
     
     if (!user || (!user.isActive)) {
@@ -43,13 +51,22 @@ export default function LoginPage() {
       return;
     }
 
-    // 2. Finalize Login
-    const { success } = login(currentPin);
-    
-    if (success) {
-      if (user.role === 'Worker') {
-        clockIn(undefined, 'manual');
+    setIsVerifying(true);
+    try {
+      const res = login(currentPin);
+      
+      if (res.success) {
+        if (user.role === 'Worker') {
+          clockIn(undefined, 'manual');
+        }
+      } else {
+        setError(res.error || 'Login failed');
+        setPin('');
+        setShake(true);
+        setTimeout(() => setShake(false), 800);
       }
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -102,8 +119,11 @@ export default function LoginPage() {
 
 
           {error && (
-            <div className="mb-6 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm text-center font-medium">
-              {error}
+            <div className="mb-6 p-3 rounded-xl border flex items-start gap-3 text-sm font-medium bg-red-500/10 border-red-500/20 text-red-500">
+              <XCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <div className="flex-1 text-center pr-4">
+                {error}
+              </div>
             </div>
           )}
 
@@ -159,11 +179,20 @@ export default function LoginPage() {
           <div className="mt-6 flex flex-col gap-3">
             <button
               onClick={handleLoginSubmit}
-              disabled={pin.length < 4 || pin.length > maxPin}
+              disabled={pin.length < 4 || pin.length > maxPin || isVerifying}
               className="w-full bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 disabled:bg-slate-800 disabled:text-slate-500 text-white font-semibold py-4 rounded-2xl shadow-lg shadow-emerald-500/20 flex items-center justify-center transition-all duration-200 active:scale-95 text-lg"
             >
-              Login
-              <ChevronRight className="w-5 h-5 ml-2" />
+              {isVerifying ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Verifying...
+                </>
+              ) : (
+                <>
+                  Login
+                  <ChevronRight className="w-5 h-5 ml-2" />
+                </>
+              )}
             </button>
 
             {biometricsSupported && (

@@ -1,13 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, AttendanceLog, BreakLog, UserRole } from '../types';
+import { User, AttendanceLog, BreakLog, UserRole, Notification } from '../types';
+import { startRegistration, startAuthentication } from '@simplewebauthn/browser';
 import { db } from '../lib/database';
 import { useSettings } from './SettingsContext';
+import { useRBAC } from './RBACContext';
 
 const STORAGE_KEY_USERS = 'tys_hrms_users_v2';
 const STORAGE_KEY_SESSION = 'tys_hrms_session_v2';
 const STORAGE_KEY_ATTENDANCE = 'tys_hrms_attendance_v2';
 const STORAGE_KEY_BREAKS = 'tys_hrms_breaks_v2';
-const STORAGE_KEY_NOTIFICATIONS = 'tys_hrms_notifications_v2';
 
 function generateId(): string {
   return crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -20,12 +21,6 @@ interface SessionState {
   isClockedIn: boolean;
   isOnBreak: boolean;
   breakStartTime: number | null;
-  geofenceStatus: 'inside' | 'outside' | 'unknown' | 'disabled';
-}
-
-interface UnreadNotif {
-  userId: string;
-  count: number;
 }
 
 interface AuthContextType {
@@ -35,30 +30,23 @@ interface AuthContextType {
   breakLogs: BreakLog[];
   unreadCount: number;
   isFirstRun: boolean;
-  // User management
+  isLoading: boolean;
   createInitialAdmin: (name: string, pin: string) => boolean;
   createUser: (data: Omit<User, 'id' | 'createdAt' | 'isActive'>) => boolean;
   updateUser: (id: string, updates: Partial<User>) => void;
   deleteUser: (id: string) => void;
-  // Auth
-  login: (pin: string) => { success: boolean; geofenceStatus?: string };
+  login: (pin: string) => { success: boolean; error?: string };
   logout: () => void;
-  // Attendance
   clockIn: (latLng?: string, method?: AttendanceLog['method']) => void;
   clockOut: (latLng?: string) => void;
   startBreak: () => void;
   endBreak: () => void;
-  // Geofence
-
-  // Biometrics
   registerBiometrics: () => Promise<{ success: boolean; error?: string }>;
   loginBiometric: () => Promise<{ success: boolean; error?: string }>;
-  // Stats helpers
   getTodayAttendance: (userId: string) => AttendanceLog | undefined;
   getAllTodayAttendance: () => AttendanceLog[];
   migrateLocalToCloud: () => Promise<{ success: boolean; count: number }>;
 }
-
 
 const defaultSession: SessionState = {
   currentUser: null,
@@ -67,13 +55,13 @@ const defaultSession: SessionState = {
   isClockedIn: false,
   isOnBreak: false,
   breakStartTime: null,
-  geofenceStatus: 'unknown',
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { settings } = useSettings();
+  const { permissions } = useRBAC();
   const [users, setUsers] = useState<User[]>(() => {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY_USERS) || '[]'); } catch { return []; }
   });
@@ -94,13 +82,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   const [unreadCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => { localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users)); }, [users]);
   useEffect(() => { localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(session)); }, [session]);
   useEffect(() => { localStorage.setItem(STORAGE_KEY_ATTENDANCE, JSON.stringify(attendanceLogs)); }, [attendanceLogs]);
   useEffect(() => { localStorage.setItem(STORAGE_KEY_BREAKS, JSON.stringify(breakLogs)); }, [breakLogs]);
 
-  // Sync current user if updated
   useEffect(() => {
     if (session.currentUser) {
       const updated = users.find(u => u.id === session.currentUser!.id);
@@ -108,20 +96,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(prev => ({ ...prev, currentUser: updated }));
       }
     }
-  }, [users]);
+  }, [users, session.currentUser]);
 
-  // --- Zero-Touch Auto-Migration ---
   useEffect(() => {
     if (!settings.mongodb.isEnabled) return;
     const hasSynced = localStorage.getItem('tys_hrms_auth_cloud_synced_v2');
     if (hasSynced === 'true') return;
 
     const performAuthAutoSync = async () => {
-      console.log('[AutoSync-Auth] Performing first-time local to cloud migration...');
       try {
         await migrateLocalToCloud();
         localStorage.setItem('tys_hrms_auth_cloud_synced_v2', 'true');
-        console.log('[AutoSync-Auth] Successful.');
       } catch (e) {
         console.error('[AutoSync-Auth] Failed:', e);
       }
@@ -129,23 +114,62 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     const timer = setTimeout(performAuthAutoSync, 1500);
     return () => clearTimeout(timer);
-  }, [settings.mongodb.isEnabled, users]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [settings.mongodb.isEnabled]);
+
+  useEffect(() => {
+    if (!settings.mongodb.isEnabled) return;
+    const pollAuthData = async () => {
+      try {
+        const [cUsers, cAttendance, cBreaks] = await Promise.all([
+          db.getAll<User>('users'),
+          db.getAll<AttendanceLog>('attendance'),
+          db.getAll<BreakLog>('breaks')
+        ]);
+        if (cUsers.length) setUsers(cUsers);
+        if (cAttendance.length) setAttendanceLogs(cAttendance);
+        if (cBreaks.length) setBreakLogs(cBreaks);
+      } catch (e) {
+        console.warn('[Heartbeat-Auth] Sync failed (silent):', e);
+      }
+    };
+    const intervalId = setInterval(pollAuthData, 6000);
+    return () => clearInterval(intervalId);
+  }, [settings.mongodb.isEnabled]);
 
   // --- Cloud Sync: Initial Load ---
   useEffect(() => {
-    if (!settings.mongodb.isEnabled) return;
+    if (!settings.mongodb.isEnabled) {
+      setIsLoading(false);
+      return;
+    }
+
+    // Safety Fallback: Force load completion after 5 seconds to prevent hanging
+    const fallbackTimeout = setTimeout(() => {
+      console.warn('[CloudSync] Fallback triggered: Loading takes too long, continuing with local data.');
+      setIsLoading(false);
+    }, 5000);
+
     const loadCloudAuthData = async () => {
-      console.log('[CloudSync] Loading Auth data from MongoDB...');
-      const [cUsers, cAttendance, cBreaks] = await Promise.all([
-        db.getAll<User>('users'),
-        db.getAll<AttendanceLog>('attendance'),
-        db.getAll<BreakLog>('breaks')
-      ]);
-      if (cUsers.length) setUsers(cUsers);
-      if (cAttendance.length) setAttendanceLogs(cAttendance);
-      if (cBreaks.length) setBreakLogs(cBreaks);
+      console.log('[CloudSync] Initializing Auth data from MongoDB...');
+      try {
+        const [cUsers, cAttendance, cBreaks] = await Promise.all([
+          db.getAll<User>('users'),
+          db.getAll<AttendanceLog>('attendance'),
+          db.getAll<BreakLog>('breaks')
+        ]);
+        if (cUsers.length) setUsers(cUsers);
+        if (cAttendance.length) setAttendanceLogs(cAttendance);
+        if (cBreaks.length) setBreakLogs(cBreaks);
+      } catch (e) {
+        console.error('[CloudSync] Failed initial load:', e);
+      } finally {
+        clearTimeout(fallbackTimeout);
+        setIsLoading(false);
+      }
     };
     loadCloudAuthData();
+
+    return () => clearTimeout(fallbackTimeout);
   }, [settings.mongodb.isEnabled]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -156,7 +180,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const isFirstRun = users.length === 0;
+  const isFirstRun = !isLoading && users.length === 0;
 
   const createInitialAdmin = (name: string, pin: string): boolean => {
     if (users.some(u => u.pinCode === pin)) return false;
@@ -193,10 +217,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (settings.mongodb.isEnabled) db.delete('users', id);
   };
 
-
-  const login = (pin: string): { success: boolean } => {
+  const login = (pin: string): { success: boolean, error?: string } => {
     const user = users.find(u => u.pinCode === pin && u.isActive);
-    if (!user) return { success: false };
+    if (!user) return { success: false, error: 'Invalid PIN' };
 
     const today = new Date().toISOString().split('T')[0];
     const existingLog = attendanceLogs.find(l => l.userId === user.id && l.date === today && !l.clockOut);
@@ -211,7 +234,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isClockedIn: !!existingLog,
       isOnBreak: !!existingBreak,
       breakStartTime: existingBreak ? new Date(existingBreak.startTime).getTime() : null,
-      geofenceStatus: 'unknown',
     });
     return { success: true };
   };
@@ -281,72 +303,63 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!window.PublicKeyCredential) return { success: false, error: 'Biometrics not supported' };
 
     try {
-      const challenge = crypto.getRandomValues(new Uint8Array(32));
-      const userID = new TextEncoder().encode(session.currentUser.id);
+      const optionsRes = await fetch('/api/auth/register-options', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: session.currentUser.id, userName: session.currentUser.name }),
+      });
+      const options = await optionsRes.json();
+      if (options.error) throw new Error(options.error);
 
-      const options: CredentialCreationOptions = {
-        publicKey: {
-          challenge,
-          rp: { name: 'TYS-HRMS' },
-          user: {
-            id: userID,
-            name: session.currentUser.name,
-            displayName: session.currentUser.name,
-          },
-          pubKeyCredParams: [{ alg: -7, type: 'public-key' }, { alg: -257, type: 'public-key' }],
-          authenticatorSelection: { userVerification: 'required' },
-          timeout: 60000,
-        },
-      };
+      const credential = await startRegistration(options);
 
-      const credential = await navigator.credentials.create(options) as any;
-      if (!credential) return { success: false, error: 'Failed to create credential' };
+      const verifyRes = await fetch('/api/auth/register-verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: credential, userId: session.currentUser.id }),
+      });
+      const result = await verifyRes.json();
 
-      const b64Id = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
-      // In a real app, we'd send 'credential.response' to the server to verify and store public key.
-      // Here we mock it by storing the ID.
-      
-      const newCred = {
-        id: b64Id,
-        publicKey: 'MOCKED_PUBLIC_KEY', // Placeholder
-        createdAt: new Date().toISOString(),
-      };
-
-      const updatedCreds = [...(session.currentUser.biometricCredentials || []), newCred];
-      updateUser(session.currentUser.id, { biometricCredentials: updatedCreds });
-
-      return { success: true };
+      if (result.success) {
+        const updatedUsers = await db.getAll<User>('users');
+        setUsers(updatedUsers);
+        return { success: true };
+      }
+      return { success: false, error: result.error || 'Registration failed' };
     } catch (err: any) {
       console.error('Biometric Registration Error:', err);
       return { success: false, error: err.message };
     }
   };
 
-  const loginBiometric = async (): Promise<{ success: boolean; error?: string }> => {
+  const loginBiometric = async (): Promise<{ success: boolean, error?: string }> => {
     if (!window.PublicKeyCredential) return { success: false, error: 'Biometrics not supported' };
 
     try {
-      // For local-only mock, we have to know which users might have registered.
-      // In real WebAuthn, we'd send a challenge and get an assertion.
-      const credential = await navigator.credentials.get({
-        publicKey: {
-          challenge: crypto.getRandomValues(new Uint8Array(32)),
-          userVerification: 'required',
-          timeout: 60000,
-        },
-      }) as any;
+      const optionsRes = await fetch('/api/auth/login-options', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ }),
+      });
+      const options = await optionsRes.json();
+      if (options.error) throw new Error(options.error);
 
-      if (!credential) return { success: false, error: 'Biometric failed' };
-
-      const b64Id = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
-      
-      // Find user who owns this credential ID
-      const user = users.find(u => u.biometricCredentials?.some(c => c.id === b64Id));
+      const assertion = await startAuthentication(options);
+      const user = users.find(u => u.biometricCredentials?.some(c => c.id === assertion.id));
       if (!user) return { success: false, error: 'Device not registered for any user' };
 
-      // Reuse login logic
-      const loginRes = login(user.pinCode);
-      return { success: loginRes.success };
+      const verifyRes = await fetch('/api/auth/login-verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: assertion, userId: user.id }),
+      });
+      const result = await verifyRes.json();
+
+      if (result.success) {
+        const loginRes = login(user.pinCode);
+        return { success: loginRes.success, error: loginRes.error };
+      }
+      return { success: false, error: result.error || 'Authentication failed' };
     } catch (err: any) {
       console.error('Biometric Login Error:', err);
       return { success: false, error: err.message };
@@ -363,7 +376,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      users, session, attendanceLogs, breakLogs, unreadCount, isFirstRun,
+      users, session, attendanceLogs, breakLogs, unreadCount, isFirstRun, isLoading,
       createInitialAdmin, createUser, updateUser, deleteUser,
       login, logout, clockIn, clockOut, startBreak, endBreak,
       getTodayAttendance, getAllTodayAttendance,
@@ -373,7 +386,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     </AuthContext.Provider>
   );
 }
-
 
 export function useAuth(): AuthContextType {
   const ctx = useContext(AuthContext);

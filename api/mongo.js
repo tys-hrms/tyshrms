@@ -23,6 +23,9 @@ const ALLOWED_COLLECTIONS = new Set([
   'workflow_nodes',
   'workflow_edges',
   'notifications',
+  'challenges',
+  'rbac_permissions',
+  'shifts',
 ]);
 
 // ─── MongoDB Client (cached across warm invocations) ─────────────────────────

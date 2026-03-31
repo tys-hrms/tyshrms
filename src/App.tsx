@@ -2,8 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from
 import { useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AppProvider } from './contexts/AppContext';
-import { SettingsProvider } from './contexts/SettingsContext';
-import { RBACProvider } from './contexts/RBACContext';
+import { SettingsProvider, useSettings } from './contexts/SettingsContext';
+import { RBACProvider, useRBAC } from './contexts/RBACContext';
 
 import LoginPage from './pages/LoginPage';
 import FirstRunPage from './pages/FirstRunPage';
@@ -20,16 +20,18 @@ import ProductsPage from './pages/ProductsPage';
 import LeaveManagement from './pages/attendance/LeaveManagement';
 import ReportsPage from './pages/ReportsPage';
 
-// Temporary placeholders until we build them in the next steps
-const Placeholder = ({ title }: { title: string }) => (
-  <div className="flex h-[50vh] flex-col items-center justify-center text-slate-400">
-    <h2 className="text-2xl font-bold text-white mb-2">{title}</h2>
-    <p>This module is under construction</p>
+// Temporary loading splash
+const LoadingSplash = ({ message = 'Initializing TYS Cloud...' }: { message?: string }) => (
+  <div className="fixed inset-0 bg-slate-950 flex flex-col items-center justify-center z-50">
+    <div className="w-16 h-16 border-4 border-custom-blue/20 border-t-custom-blue rounded-full animate-spin mb-4" />
+    <p className="text-slate-400 font-medium animate-pulse">{message}</p>
   </div>
 );
 
 function AppRoutes() {
-  const { session, isFirstRun } = useAuth();
+  const { session, isFirstRun, isLoading: authLoading } = useAuth();
+  const { isLoading: settingsLoading } = useSettings();
+  const { isLoading: rbacLoading } = useRBAC();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -42,6 +44,8 @@ function AppRoutes() {
     return () => window.removeEventListener('nav-request' as any, handleNav);
   }, [navigate]);
 
+  if (authLoading) return <LoadingSplash message="Verifying Identity..." />;
+  if (settingsLoading || rbacLoading) return <LoadingSplash message="Syncing System Settings..." />;
   if (isFirstRun) return <FirstRunPage />;
   if (!session.currentUser) return <LoginPage />;
 

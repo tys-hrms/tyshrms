@@ -16,7 +16,6 @@ export default function SettingsPage() {
   const tabs = [
     { id: 'profile', label: 'My Profile', icon: User },
     { id: 'locations', label: 'Locations (HQ/Branch)', icon: Building2 },
-    { id: 'shopify', label: 'Shopify Sync', icon: Store },
     { id: 'mongodb', label: 'MongoDB Atlas', icon: Database },
     { id: 'automation', label: 'Automation & Sync', icon: Clock },
     { id: 'shifts', label: 'Shift Intervals', icon: Clock },
@@ -57,7 +56,6 @@ export default function SettingsPage() {
       <div className="pt-4">
         {activeTab === 'profile' && <ProfileSettings />}
         {activeTab === 'locations' && <LocationSettings />}
-        {activeTab === 'shopify' && <ShopifySettings />}
         { activeTab === 'mongodb' && <MongoSettings />}
         { activeTab === 'automation' && <AutomationSettings />}
         { activeTab === 'shifts' && <ShiftSettings />}

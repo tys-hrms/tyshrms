@@ -42,6 +42,15 @@ export const db = {
   },
 
   /**
+   * Fetches a single document (first one found) in a collection.
+   * Useful for configuration/settings documents.
+   */
+  async getSingle<T>(collection: string): Promise<T | undefined> {
+    const documents = await this.getAll<T>(collection);
+    return documents[0];
+  },
+
+  /**
    * Saves or updates a document (Upsert pattern).
    */
   async save(collection: string, document: any) {

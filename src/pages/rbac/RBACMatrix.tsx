@@ -2,39 +2,35 @@ import React, { useState } from 'react';
 import { useRBAC } from '../../contexts/RBACContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { UserRole, AppModule, PermissionScope } from '../../types';
-import { Save, Check, Lock, Globe, MapPin, XCircle } from 'lucide-react';
+import { Save, Check, Lock, Globe, MapPin, XCircle, ShieldCheck } from 'lucide-react';
 
 export default function RBACMatrix() {
   const { session } = useAuth();
-  const { permissions, updatePermission, can } = useRBAC();
-  const [isSaved, setIsSaved] = useState(false);
-
   const currentUserRole = session.currentUser?.role || 'Worker';
   const isAdminSession = currentUserRole === 'Admin';
+  const { permissions, updatePermission, toggleFeature } = useRBAC();
+  const [isSaved, setIsSaved] = useState(false);
 
   const roles: UserRole[] = ['Admin', 'Manager', 'Worker'];
   const modules: AppModule[] = ['dashboard', 'users', 'products', 'assignments', 'attendance', 'leaves', 'settings', 'rbac', 'reports'];
   const actions: ('view' | 'create' | 'edit' | 'delete')[] = ['view', 'create', 'edit', 'delete'];
 
-  const getScope = (role: UserRole, module: AppModule, action: 'view'|'create'|'edit'|'delete'): PermissionScope => {
+  const isModuleEnabled = (role: UserRole, module: AppModule): boolean => {
     const perm = permissions.find(p => p.role === role && p.module === module);
-    if (!perm) return 'none';
-    switch (action) {
-      case 'view': return perm.viewScope;
-      case 'create': return perm.createScope;
-      case 'edit': return perm.editScope;
-      case 'delete': return perm.deleteScope;
-    }
+    return perm ? perm.viewScope !== 'none' : false;
   };
 
-  const handleToggle = (role: UserRole, module: AppModule, action: any, currentScope: PermissionScope) => {
-    if (currentScope !== 'none') {
-      updatePermission(role, module, action, 'none');
-    } else {
-      const isGlobalModule = ['products', 'settings', 'rbac'].includes(module);
-      const newScope = (role === 'Admin' || isGlobalModule) ? 'global' : 'location';
-      updatePermission(role, module, action, newScope);
-    }
+  const isFeatureEnabled = (role: UserRole, feature: 'biometricAllowed'): boolean => {
+    const perm = permissions.find(p => p.role === role);
+    return perm?.features?.[feature] ?? false;
+  };
+
+  const handleModuleToggle = (role: UserRole, module: AppModule, isEnabled: boolean) => {
+    const newScope = isEnabled ? 'none' : (role === 'Admin' ? 'global' : 'location');
+    updatePermission(role, module, 'view', newScope);
+    updatePermission(role, module, 'create', newScope);
+    updatePermission(role, module, 'edit', newScope);
+    updatePermission(role, module, 'delete', newScope);
   };
 
   const handleSave = () => {
@@ -71,55 +67,93 @@ export default function RBACMatrix() {
         </div>
       </div>
 
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="border-b border-slate-800 bg-slate-900/50">
-                <th className="px-6 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider w-48">Module</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider w-64">Core Module Access</th>
                 {roles.map(role => (
                   <th key={role} className="px-6 py-4 text-xs font-semibold text-white tracking-wider border-l border-slate-800 text-center">
-                    {role}
+                    <div className="flex flex-col items-center gap-1">
+                      <ShieldCheck className="w-4 h-4 text-custom-blue" />
+                      {role}
+                    </div>
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/50">
               {modules.map(moduleName => (
-                <tr key={moduleName} className="hover:bg-slate-800/30 transition-colors">
+                <tr key={moduleName} className="hover:bg-slate-800/20 transition-colors group">
                   <td className="px-6 py-4 font-medium text-slate-300 capitalize text-sm">
                     {moduleName}
                   </td>
-                  {roles.map(role => (
-                    <td key={role} className="px-6 py-4 border-l border-slate-800">
-                      <div className="grid grid-cols-2 gap-2 max-w-[160px] mx-auto">
-                        {actions.map(action => {
-                          const scope = getScope(role, moduleName, action);
-                          const hasPerm = scope !== 'none';
-                          const isAdminRoleMapping = role === 'Admin';
-                          const isDisabled = isAdminRoleMapping || !isAdminSession;
-                          
-                          return (
-                            <label 
-                              key={action} 
-                              className={`flex items-center space-x-2 text-xs cursor-pointer ${isDisabled ? 'opacity-50' : 'hover:bg-slate-800'} p-1 rounded transition-colors`}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={hasPerm}
-                                disabled={isDisabled}
-                                onChange={() => handleToggle(role, moduleName, action, scope)}
-                                className={`rounded border-slate-700 bg-slate-900 focus:ring-custom-blue w-3.5 h-3.5 ${isDisabled ? 'cursor-not-allowed text-slate-500' : 'text-custom-blue cursor-pointer'}`}
-                              />
-                              <span className={`capitalize ${hasPerm ? 'text-slate-200 font-medium' : 'text-slate-500'}`}>{action}</span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </td>
-                  ))}
+                  {roles.map(role => {
+                    const isEnabled = isModuleEnabled(role, moduleName);
+                    const isDisabled = role === 'Admin' || !isAdminSession;
+                    return (
+                      <td key={role} className="px-6 py-4 border-l border-slate-800 text-center">
+                        <label className={`inline-flex items-center cursor-pointer ${isDisabled ? 'opacity-40 grayscale cursor-not-allowed' : ''}`}>
+                          <div className="relative">
+                            <input
+                              type="checkbox"
+                              checked={isEnabled}
+                              disabled={isDisabled}
+                              onChange={() => handleModuleToggle(role, moduleName, isEnabled)}
+                              className="sr-only peer"
+                            />
+                            <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-custom-blue"></div>
+                          </div>
+                          <span className="ml-3 text-xs font-medium text-slate-400 group-hover:text-slate-200">
+                            {isEnabled ? 'ON' : 'OFF'}
+                          </span>
+                        </label>
+                      </td>
+                    );
+                  })}
                 </tr>
               ))}
+
+              {/* Advanced Security Features Section */}
+              <tr className="bg-slate-800/40">
+                <th colSpan={4} className="px-6 py-3 text-xs font-bold text-custom-blue uppercase tracking-widest border-y border-slate-700">
+                  Advanced Security Features
+                </th>
+              </tr>
+              
+              {/* Biometric Feature */}
+              <tr className="hover:bg-slate-800/20 transition-colors">
+                <td className="px-6 py-4 group">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                    <div>
+                      <div className="text-sm font-medium text-slate-200">Biometric Login</div>
+                      <div className="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">Identity Security</div>
+                    </div>
+                  </div>
+                </td>
+                {roles.map(role => {
+                  const isEnabled = isFeatureEnabled(role, 'biometricAllowed');
+                  const isDisabled = !isAdminSession;
+                  return (
+                    <td key={role} className="px-6 py-4 border-l border-slate-800 text-center">
+                      <label className={`flex flex-col items-center gap-2 cursor-pointer ${isDisabled ? 'opacity-40 grayscale cursor-not-allowed' : ''}`}>
+                        <input
+                          type="checkbox"
+                          checked={isEnabled}
+                          disabled={isDisabled}
+                          onChange={(e) => toggleFeature(role, 'biometricAllowed', e.target.checked)}
+                          className="w-5 h-5 rounded border-slate-700 bg-slate-800 text-custom-blue focus:ring-custom-blue focus:ring-offset-slate-900"
+                        />
+                        <span className={`text-[10px] font-bold ${isEnabled ? 'text-emerald-400' : 'text-slate-600'}`}>
+                          {isEnabled ? 'ENABLED' : 'DISABLED'}
+                        </span>
+                      </label>
+                    </td>
+                  );
+                })}
+              </tr>
             </tbody>
           </table>
         </div>
