@@ -17,7 +17,9 @@ interface SidebarProps {
 function Sidebar({ isOpen, setIsOpen, activePath, onNavigate }: SidebarProps) {
   const { session, logout } = useAuth();
   const { can } = useRBAC();
+  const { settings } = useSettings();
   const role = session.currentUser?.role || 'Worker';
+  const { branding } = settings;
 
   const navItems = [
     { id: '/', label: 'Dashboard', icon: LayoutDashboard, module: 'dashboard' },
@@ -51,10 +53,14 @@ function Sidebar({ isOpen, setIsOpen, activePath, onNavigate }: SidebarProps) {
         
         {/* Brand Area */}
         <div className="h-16 flex items-center px-6 border-b border-slate-800 shrink-0">
-          <div className="w-8 h-8 rounded-lg bg-teal-500/20 text-teal-400 flex items-center justify-center mr-3 font-bold text-xl">
-            T
+          <div className="w-8 h-8 rounded-lg bg-custom-blue/20 text-custom-blue flex items-center justify-center mr-3 font-bold text-xl overflow-hidden">
+            {branding.logoUrl ? (
+              <img src={branding.logoUrl} alt="Logo" className="w-full h-full object-contain" />
+            ) : (
+              branding.companyName.charAt(0)
+            )}
           </div>
-          <span className="text-white font-semibold text-lg tracking-wide">TYS-HRMS</span>
+          <span className="text-white font-semibold text-lg tracking-wide truncate">{branding.companyName}</span>
         </div>
 
         {/* User Profile Mini */}
@@ -113,6 +119,7 @@ function TopHeader({ setIsSidebarOpen }: { setIsSidebarOpen: (v: boolean) => voi
 
   const isCloudEnabled = settings.mongodb.isEnabled;
   const role = session.currentUser?.role || 'Worker';
+  const { branding } = settings;
 
   const myNotifications = notifications.filter(n => 
     n.userId === session.currentUser?.id || 
@@ -130,7 +137,7 @@ function TopHeader({ setIsSidebarOpen }: { setIsSidebarOpen: (v: boolean) => voi
           <Menu className="w-6 h-6" />
         </button>
         <div className="hidden md:block">
-           <h2 className="text-white font-semibold text-sm tracking-wide hidden lg:block opacity-50 uppercase">TYS Operations</h2>
+           <h2 className="text-white font-semibold text-sm tracking-wide hidden lg:block opacity-50 uppercase">{branding.companyName} Operations</h2>
         </div>
       </div>
       

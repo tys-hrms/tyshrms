@@ -1,4 +1,20 @@
-// TYS-HRMS V2 — Core TypeScript Types
+// HRMSCore V2 — Core TypeScript Types
+
+// ─── Tenant & SaaS ─────────────────────────────────────────────────────────
+
+export interface Tenant {
+  id: string; // 6-digit random number (e.g., "827192")
+  name: string;
+  adminName: string;
+  dob: string;
+  companyType: string;
+  employeeCount: string;
+  email: string;
+  phone: string;
+  gst?: string;
+  isActive: boolean;
+  createdAt: string;
+}
 
 // ─── User & Auth ───────────────────────────────────────────────────────────
 
@@ -6,6 +22,7 @@ export type UserRole = 'Admin' | 'Manager' | 'Worker';
 
 export interface Shift {
   id: string;
+  tenantId: string;
   name: string;
   startTime: string;    // "HH:MM"
   endTime: string;
@@ -23,6 +40,7 @@ export interface BiometricCredential {
 
 export interface User {
   id: string;
+  tenantId: string;
   name: string;
   pinCode: string;
   role: UserRole;
@@ -80,6 +98,7 @@ export type TaskMode = 'single' | 'jodi';
 
 export interface TaskDefinition {
   id: string;
+  tenantId: string;
   name: TaskType;
   allowedModes: TaskMode[];  // Ironing/Checking: both; Labeling/Packing: ['single']
   defaultMode: TaskMode;
@@ -91,6 +110,7 @@ export interface TaskDefinition {
 
 export interface Product {
   id: string;
+  tenantId: string;
   sku: string;
   title: string;
   barcode?: string;
@@ -110,6 +130,7 @@ export type AssignmentStatus = 'pending' | 'in_progress' | 'completed' | 'paused
 
 export interface Assignment {
   id: string;
+  tenantId: string;
   date: string;                    // "YYYY-MM-DD"
   dueDate?: string;
   userId: string;
@@ -141,6 +162,7 @@ export interface AssignmentCarryForward {
 
 export interface WorkLog {
   id: string;
+  tenantId: string;
   assignmentId: string;
   userId: string;
   date: string;
@@ -159,6 +181,7 @@ export interface WorkLog {
 
 export interface DefectReason {
   id: string;
+  tenantId: string;
   label: string;
 }
 
@@ -169,6 +192,7 @@ export type AttendanceMethod = 'manual' | 'auto';
 
 export interface AttendanceLog {
   id: string;
+  tenantId: string;
   userId: string;
   date: string;
   clockIn?: string;
@@ -194,6 +218,7 @@ export type LeaveStatus = 'pending' | 'approved' | 'rejected';
 
 export interface LeaveRequest {
   id: string;
+  tenantId: string;
   userId: string;
   date: string;
   type: LeaveType;
@@ -206,6 +231,7 @@ export interface LeaveRequest {
 
 export interface LeaveLog {
   id: string;
+  tenantId: string;
   userId: string;
   date: string; // Start Date
   endDate?: string;
@@ -221,6 +247,7 @@ export interface LeaveLog {
 
 export interface InboundShipment {
   id: string;
+  tenantId: string;
   receiverId: string;
   sku: string;
   quantity: number;
@@ -232,6 +259,7 @@ export interface InboundShipment {
 
 export interface DispatchBatch {
   id: string;
+  tenantId: string;
   packerId: string;
   sku?: string;
   labelScanned?: string;
@@ -270,6 +298,7 @@ export interface LeaveAutomationSettings {
 
 export interface Workstation {
   id: string;
+  tenantId: string;
   name: string;      // e.g. "Table 1"
   taskTypes: string[]; // e.g. ["Checking", "Ironing"]
 }
@@ -278,6 +307,7 @@ export type LocationType = 'head_office' | 'branch' | 'warehouse';
 
 export interface Location {
   id: string;
+  tenantId: string;
   name: string;
   type: LocationType;
   address?: string;
@@ -287,12 +317,23 @@ export interface Location {
   isPrimary?: boolean;
 }
 
+export interface BrandingSettings {
+  companyName: string;
+  logoUrl?: string;
+  primaryColor: string;    // e.g., "#2d7cf6"
+  secondaryColor: string;  // e.g., "#14b8a6"
+  accentColor: string;     // e.g., "#f59e0b"
+  themeMode: 'dark' | 'light';
+}
+
 export interface AppSettings {
+  tenantId: string;
   shopify: ShopifySettings;
   mongodb: MongoSettings;
   leaveAutomation: LeaveAutomationSettings;
   workstations: Workstation[];
   locations: Location[];
+  branding: BrandingSettings;
 }
 
 
@@ -300,6 +341,7 @@ export interface AppSettings {
 
 export interface Notification {
   id: string;
+  tenantId: string;
   userId: string;      // recipient
   senderId?: string;   // who triggered it
   title: string;
@@ -327,3 +369,4 @@ export interface DailyStats {
   completedAssignments: number;
   pendingAssignments: number;
 }
+

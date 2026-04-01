@@ -26,6 +26,7 @@ const ALLOWED_COLLECTIONS = new Set([
   'challenges',
   'rbac_permissions',
   'shifts',
+  'tenants',
 ]);
 
 // ─── MongoDB Client (cached across warm invocations) ─────────────────────────

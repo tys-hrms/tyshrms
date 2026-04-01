@@ -219,7 +219,7 @@ export default function MongoSettings() {
         <ol className="list-decimal list-inside space-y-3 text-sm text-slate-400">
           <li>Log in to your <strong>MongoDB Atlas</strong> dashboard.</li>
           <li>Navigate to <strong>App Services</strong> in the left sidebar.</li>
-          <li>Create a new Application (e.g., "TYS-HRMS-API").</li>
+          <li>Create a new Application (e.g., "HRMSCore-API").</li>
           <li>In the App Services dashboard, enable the <strong>Data API</strong>.</li>
           <li>Generate an <strong>API Key</strong> under the "Authentication" section or use the one provided by Data API settings.</li>
           <li>Copy the <strong>App ID</strong> from the top left and the API Key into the form above.</li>

@@ -1,20 +1,26 @@
 import React, { useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useApp } from '../contexts/AppContext';
+import { useSettings } from '../contexts/SettingsContext';
 import { 
   CheckCircle2, Clock, Users, Package, TrendingUp, AlertCircle, 
-  Shirt, Search, Tag, Box, MessageSquare, ShieldAlert, CheckSquare 
+  Shirt, Search, Tag, Box, MessageSquare, ShieldAlert, CheckSquare,
+  Printer
 } from 'lucide-react';
 
 export default function AdminDashboard() {
-  const { session } = useAuth();
-  const { users } = useAuth();
+  const { session, users } = useAuth();
   const { getDailyStats, notifications, markNotificationRead } = useApp();
+  const { settings } = useSettings();
   
   const today = new Date().toISOString().split('T')[0];
   const stats = useMemo(() => getDailyStats(today), [getDailyStats, today]);
   const urgentAlerts = notifications.filter(n => n.type === 'alert' && !n.read);
 
+  const handlePrint = () => {
+    window.print();
+  };
+  
   const cards = [
     { label: 'Total Pieces Assigned', value: stats.totalPiecesAssigned, icon: Package, color: 'text-blue-400', bg: 'bg-blue-500/10' },
     { label: 'Pieces Completed', value: stats.totalPiecesCompleted, icon: CheckCircle2, color: 'text-teal-400', bg: 'bg-teal-500/10' },
@@ -39,13 +45,36 @@ export default function AdminDashboard() {
     <div className="space-y-6 animate-in fade-in duration-300">
       
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-white tracking-tight">
-          Welcome back, {session.currentUser?.name?.split(' ')[0]}
-        </h1>
-        <p className="text-slate-400 text-sm mt-1">
-          {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
-        </p>
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 print:hidden">
+        <div>
+          <h1 className="text-2xl font-bold text-white tracking-tight">
+            Welcome back, {session.currentUser?.name?.split(' ')[0]}
+          </h1>
+          <p className="text-slate-400 text-sm mt-1">
+            {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </p>
+        </div>
+        <button 
+          onClick={handlePrint}
+          className="flex items-center gap-2 px-4 py-2 bg-slate-900 border border-slate-800 text-slate-400 hover:text-white rounded-xl transition-all font-bold text-xs uppercase tracking-widest"
+        >
+          <Printer className="w-4 h-4" />
+          Print Summary
+        </button>
+      </div>
+
+      {/* Print Header (Visible only when printing) */}
+      <div className="hidden print:block border-b-2 border-slate-900 pb-6 mb-8">
+        <div className="flex justify-between items-end">
+            <div>
+                <h1 className="text-2xl font-black text-slate-900">{settings.branding.companyName}</h1>
+                <p className="text-sm font-bold text-slate-600 uppercase tracking-widest mt-1">Daily Operations Summary</p>
+            </div>
+            <div className="text-right">
+                <p className="text-xs font-bold text-slate-500 uppercase">Generated On</p>
+                <p className="text-sm font-black text-slate-900">{new Date().toLocaleString()}</p>
+            </div>
+        </div>
       </div>
 
       {/* Main KPI Grid */}
@@ -149,7 +178,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Quick Assignment Snapshot (could be added later, for now placeholder) */}
+        {/* Action Items */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
           <h2 className="text-lg font-semibold text-white mb-6">Action Items</h2>
           {stats.totalPiecesPending > 0 ? (

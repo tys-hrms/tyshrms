@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Store, Database, Clock, User, Building2 } from 'lucide-react';
+import { Store, Database, Clock, User, Building2, Palette } from 'lucide-react';
 
 import ShopifySettings from './settings/ShopifySettings';
 import ShiftSettings from './settings/ShiftSettings';
@@ -7,13 +7,15 @@ import MongoSettings from './settings/MongoSettings';
 import ProfileSettings from './settings/ProfileSettings';
 import LocationSettings from './settings/LocationSettings';
 import AutomationSettings from './settings/AutomationSettings';
+import BrandingSettings from './settings/BrandingSettings';
 
-type Tab = 'shopify' | 'shifts' | 'mongodb' | 'profile' | 'locations' | 'automation';
+type Tab = 'shopify' | 'shifts' | 'mongodb' | 'profile' | 'locations' | 'automation' | 'branding';
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<Tab>('profile');
+  const [activeTab, setActiveTab] = useState<Tab>('branding');
 
   const tabs = [
+    { id: 'branding', label: 'Company Branding', icon: Palette },
     { id: 'profile', label: 'My Profile', icon: User },
     { id: 'locations', label: 'Locations (HQ/Branch)', icon: Building2 },
     { id: 'mongodb', label: 'MongoDB Atlas', icon: Database },
@@ -54,6 +56,7 @@ export default function SettingsPage() {
 
       {/* Tab Content Area */}
       <div className="pt-4">
+        {activeTab === 'branding' && <BrandingSettings />}
         {activeTab === 'profile' && <ProfileSettings />}
         {activeTab === 'locations' && <LocationSettings />}
         { activeTab === 'mongodb' && <MongoSettings />}

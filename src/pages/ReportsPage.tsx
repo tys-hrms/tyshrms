@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useSettings } from '../contexts/SettingsContext';
 import { 
   BarChart3, Users, Package, TrendingUp, Calendar, 
   ArrowUpRight, ArrowDownRight, Download, Filter,
@@ -10,9 +11,21 @@ import {
 export default function ReportsPage() {
   const { assignments, workLogs, getDailyStats } = useApp();
   const { users, attendanceLogs } = useAuth();
+  const { settings } = useSettings();
   const [timeRange, setTimeRange] = useState<'today' | 'week' | 'month'>('today');
 
   const stats = useMemo(() => getDailyStats(), [getDailyStats]);
+
+  // --- Dynamic Quality Rate Calculation ---
+  const qualityRate = useMemo(() => {
+    const totalProcessed = stats.totalPiecesCompleted + stats.totalRejected;
+    if (totalProcessed === 0) return '0%';
+    return `${Math.round((stats.totalPiecesCompleted / totalProcessed) * 100)}%`;
+  }, [stats]);
+
+  const handlePrint = () => {
+    window.print();
+  };
 
   // --- Process Production Data ---
   const productionBySKU = useMemo(() => {
@@ -50,7 +63,7 @@ export default function ReportsPage() {
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 print:hidden">
         <div>
           <h1 className="text-3xl font-extrabold text-white tracking-tight">Intelligence Dashboard</h1>
           <p className="text-slate-400 mt-1">Real-time operational analytics for workforce productivity and inventory flow.</p>
@@ -67,44 +80,61 @@ export default function ReportsPage() {
               </button>
             ))}
           </div>
-          <button className="p-2.5 bg-slate-900 border border-slate-800 text-slate-400 hover:text-white rounded-xl transition-all">
-            <Download className="w-5 h-5" />
+          <button 
+            onClick={handlePrint}
+            className="flex items-center gap-2 px-4 py-2.5 bg-slate-900 border border-slate-800 text-slate-400 hover:text-white rounded-xl transition-all font-bold text-xs uppercase tracking-widest"
+          >
+            <Download className="w-4 h-4" />
+            Print to A4
           </button>
         </div>
       </div>
 
-      {/* Hero Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total Attendance" value={stats.activeWorkers} sub="Workers Active" trend="+12%" icon={Users} color="blue" />
-        <StatCard label="Units Produced" value={stats.totalPiecesCompleted} sub="Pieces Finished" trend="+5.4%" icon={Package} color="emerald" />
-        <StatCard label="Quality Rate" value="98.2%" sub="Checks Passed" trend="-0.5%" icon={TrendingUp} color="amber" />
-        <StatCard label="Efficiency" value={`${Math.round((stats.totalPiecesCompleted / (stats.totalPiecesAssigned || 1)) * 100)}%`} sub="Target Achievement" trend="+2.1%" icon={BarChart3} color="purple" />
+      {/* Print Header (Visible only when printing) */}
+      <div className="hidden print:block border-b-2 border-slate-900 pb-6 mb-8">
+        <div className="flex justify-between items-end">
+            <div>
+                <h1 className="text-2xl font-black">{settings.branding.companyName}</h1>
+                <p className="text-sm font-bold text-slate-600 uppercase tracking-widest mt-1">Intelligence Operational Report</p>
+            </div>
+            <div className="text-right">
+                <p className="text-xs font-bold text-slate-500 uppercase">Generated On</p>
+                <p className="text-sm font-black">{new Date().toLocaleString()}</p>
+            </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* Hero Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 print:grid-cols-4">
+        <StatCard label="Total Attendance" value={stats.activeWorkers} sub="Workers Active" icon={Users} color="blue" trend="+2.4%" />
+        <StatCard label="Units Produced" value={stats.totalPiecesCompleted} sub="Pieces Finished" icon={Package} color="emerald" trend="+12.5%" />
+        <StatCard label="Quality Rate" value={qualityRate} sub="Checks Passed" icon={TrendingUp} color="amber" trend="+0.8%" />
+        <StatCard label="Efficiency" value={`${Math.round((stats.totalPiecesCompleted / (stats.totalPiecesAssigned || 1)) * 100)}%`} sub="Target Achievement" icon={BarChart3} color="purple" trend="-1.2%" />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 print:grid-cols-3">
         {/* Production Breakdown */}
-        <div className="lg:col-span-2 bg-slate-900/50 backdrop-blur-xl border border-white/5 rounded-3xl p-8">
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+        <div className="lg:col-span-2 bg-slate-900/50 backdrop-blur-xl border border-white/5 rounded-3xl p-8 print:border-slate-200 print:bg-white print:p-0">
+          <div className="flex items-center justify-between mb-8 print:mb-4">
+            <h3 className="text-xl font-bold text-white flex items-center gap-2 print:text-slate-900">
               <Package className="w-5 h-5 text-custom-blue" />
               Production by SKU
             </h3>
-            <button className="text-xs font-bold text-custom-blue hover:underline">View All Inventory</button>
           </div>
           
-          <div className="space-y-6">
+          <div className="space-y-6 print:space-y-4">
             {productionBySKU.map((item, i) => (
               <div key={i} className="space-y-2">
                 <div className="flex justify-between items-end">
                   <div>
-                    <span className="text-sm font-bold text-white uppercase tracking-wider">{item.sku}</span>
+                    <span className="text-sm font-bold text-white uppercase tracking-wider print:text-slate-900">{item.sku}</span>
                     <p className="text-[10px] text-slate-500 font-bold uppercase mt-0.5">{item.completed.toLocaleString()} / {item.target.toLocaleString()} Units</p>
                   </div>
-                  <span className="text-sm font-black text-white">{item.percent}%</span>
+                  <span className="text-sm font-black text-white print:text-slate-900">{item.percent}%</span>
                 </div>
-                <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
+                <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden print:bg-slate-100">
                   <div 
-                    className="h-full bg-gradient-to-r from-custom-blue to-blue-400 transition-all duration-1000"
+                    className="h-full bg-gradient-to-r from-custom-blue to-blue-400 transition-all duration-1000 print:bg-slate-900"
                     style={{ width: `${Math.min(100, item.percent)}%` }}
                   />
                 </div>
@@ -117,25 +147,25 @@ export default function ReportsPage() {
         </div>
 
         {/* Top Performers */}
-        <div className="bg-slate-900/50 backdrop-blur-xl border border-white/5 rounded-3xl p-8">
-          <h3 className="text-xl font-bold text-white flex items-center gap-2 mb-8">
+        <div className="bg-slate-900/50 backdrop-blur-xl border border-white/5 rounded-3xl p-8 print:border-slate-200 print:bg-white print:p-0">
+          <h3 className="text-xl font-bold text-white flex items-center gap-2 mb-8 print:mb-4 print:text-slate-900">
             <TrendingUp className="w-5 h-5 text-emerald-400" />
             Top Performers
           </h3>
-          <div className="space-y-5">
+          <div className="space-y-5 print:space-y-3">
             {topWorkers.map((w, i) => (
-              <div key={i} className="flex items-center justify-between p-3 rounded-2xl bg-white/[0.02] border border-white/5">
+              <div key={i} className="flex items-center justify-between p-3 rounded-2xl bg-white/[0.02] border border-white/5 print:border-slate-100 print:bg-slate-50">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center text-sm font-black text-white border border-slate-700">
+                  <div className="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center text-sm font-black text-white print:bg-slate-200 print:text-slate-700">
                     {w.name[0]}
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-white">{w.name}</p>
+                    <p className="text-sm font-bold text-white print:text-slate-900">{w.name}</p>
                     <p className="text-[10px] text-slate-500 font-bold uppercase">Rank #{i+1}</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-black text-emerald-400">{w.total.toLocaleString()}</p>
+                  <p className="text-sm font-black text-emerald-400 print:text-slate-900">{w.total.toLocaleString()}</p>
                   <p className="text-[10px] text-slate-500 font-bold uppercase">Pieces</p>
                 </div>
               </div>
@@ -147,30 +177,27 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* Activity Timeline / Recent Events */}
-      <div className="bg-slate-900/50 backdrop-blur-xl border border-white/5 rounded-3xl p-8">
-        <h3 className="text-xl font-bold text-white flex items-center gap-2 mb-8">
+      {/* Recent Activity */}
+      <div className="bg-slate-900/50 backdrop-blur-xl border border-white/5 rounded-3xl p-8 print:border-slate-200 print:bg-white print:p-0 print:border-t-2 print:mt-12">
+        <h3 className="text-xl font-bold text-white flex items-center gap-2 mb-8 print:mb-4 print:text-slate-900">
           <Clock className="w-5 h-5 text-slate-400" />
-          Recent Activity
+          Recent Activity Summary
         </h3>
-        <div className="space-y-4">
-           {workLogs.slice(-5).reverse().map((log, i) => (
-             <div key={i} className="flex items-center gap-4 p-4 rounded-2xl hover:bg-white/[0.02] transition-colors border border-transparent hover:border-white/5">
-                <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center shrink-0">
+        <div className="space-y-4 print:space-y-2">
+           {workLogs.slice(-8).reverse().map((log, i) => (
+             <div key={i} className="flex items-center gap-4 p-4 rounded-2xl border border-transparent print:border-b print:border-slate-100 print:rounded-none px-0">
+                <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center shrink-0 print:hidden">
                   <UserIcon className="w-5 h-5 text-slate-500" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-slate-300">
-                    <span className="font-bold text-white">{users.find(u => u.id === log.userId)?.name}</span> 
+                  <p className="text-sm text-slate-300 print:text-slate-700">
+                    <span className="font-bold text-white print:text-slate-900">{users.find(u => u.id === log.userId)?.name}</span> 
                     {" logged "}
-                    <span className="text-emerald-400 font-bold">{(log.piecesIroned || 0) + (log.piecesChecked || 0) + (log.piecesPacked || 0)} pieces</span>
+                    <span className="text-emerald-400 font-bold print:text-slate-900">{(log.piecesIroned || 0) + (log.piecesChecked || 0) + (log.piecesPacked || 0)} pieces</span>
                     {" for SKU "}
-                    <span className="font-bold text-white tracking-wider">{assignments.find(a => a.id === log.assignmentId)?.sku || 'Unknown'}</span>
+                    <span className="font-bold text-white tracking-wider print:text-slate-900">{assignments.find(a => a.id === log.assignmentId)?.sku || 'Unknown'}</span>
                   </p>
-                  <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">{new Date(log.loggedAt).toLocaleTimeString()}</p>
-                </div>
-                <div className="hidden sm:block">
-                  <span className="px-2 py-1 rounded-md bg-white/5 text-[10px] font-black text-slate-400 uppercase">Verification Done</span>
+                  <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">{new Date(log.loggedAt).toLocaleString()}</p>
                 </div>
              </div>
            ))}
@@ -189,14 +216,14 @@ function StatCard({ label, value, sub, trend, icon: Icon, color }: any) {
   };
 
   return (
-    <div className="bg-slate-900/50 backdrop-blur-xl border border-white/5 rounded-3xl p-6 relative overflow-hidden group hover:border-white/10 transition-all">
+    <div className="bg-slate-900/50 backdrop-blur-xl border border-white/5 rounded-3xl p-6 relative overflow-hidden group hover:border-white/10 transition-all print:border-slate-200 print:bg-slate-50 print:p-4">
       <div className={`absolute -right-4 -top-4 w-24 h-24 rounded-full ${colorMap[color].split(' ')[1]} opacity-0 group-hover:opacity-100 transition-opacity duration-700 blur-2xl`} />
       
-      <div className="flex justify-between items-start mb-4 relative z-10">
-        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${colorMap[color]}`}>
+      <div className="flex justify-between items-start mb-4 relative z-10 print:mb-2">
+        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${colorMap[color]} print:hidden`}>
           <Icon className="w-6 h-6" />
         </div>
-        <div className={`flex items-center gap-1 text-xs font-bold ${trend.startsWith('+') ? 'text-emerald-400' : 'text-rose-400'}`}>
+        <div className={`flex items-center gap-1 text-xs font-bold ${trend.startsWith('+') ? 'text-emerald-400' : 'text-rose-400'} print:hidden`}>
           {trend.startsWith('+') ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
           {trend}
         </div>
@@ -204,7 +231,7 @@ function StatCard({ label, value, sub, trend, icon: Icon, color }: any) {
       
       <div className="relative z-10">
         <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">{label}</h4>
-        <div className="text-3xl font-black text-white mt-1">{value}</div>
+        <div className="text-3xl font-black text-white mt-1 print:text-slate-900 print:text-xl">{value}</div>
         <p className="text-xs text-slate-500 font-medium mt-1">{sub}</p>
       </div>
     </div>

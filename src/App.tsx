@@ -6,6 +6,7 @@ import { SettingsProvider, useSettings } from './contexts/SettingsContext';
 import { RBACProvider, useRBAC } from './contexts/RBACContext';
 
 import LoginPage from './pages/LoginPage';
+import RegistrationPage from './pages/RegistrationPage';
 import FirstRunPage from './pages/FirstRunPage';
 import AppShell from './components/layout/AppShell';
 
@@ -21,7 +22,7 @@ import LeaveManagement from './pages/attendance/LeaveManagement';
 import ReportsPage from './pages/ReportsPage';
 
 // Temporary loading splash
-const LoadingSplash = ({ message = 'Initializing TYS Cloud...' }: { message?: string }) => (
+const LoadingSplash = ({ message = 'Initializing HRMSCore...' }: { message?: string }) => (
   <div className="fixed inset-0 bg-slate-950 flex flex-col items-center justify-center z-50">
     <div className="w-16 h-16 border-4 border-custom-blue/20 border-t-custom-blue rounded-full animate-spin mb-4" />
     <p className="text-slate-400 font-medium animate-pulse">{message}</p>
@@ -29,7 +30,7 @@ const LoadingSplash = ({ message = 'Initializing TYS Cloud...' }: { message?: st
 );
 
 function AppRoutes() {
-  const { session, isFirstRun, isLoading: authLoading } = useAuth();
+  const { session, isLoading: authLoading } = useAuth();
   const { isLoading: settingsLoading } = useSettings();
   const { isLoading: rbacLoading } = useRBAC();
   const location = useLocation();
@@ -46,7 +47,9 @@ function AppRoutes() {
 
   if (authLoading) return <LoadingSplash message="Verifying Identity..." />;
   if (settingsLoading || rbacLoading) return <LoadingSplash message="Syncing System Settings..." />;
-  if (isFirstRun) return <FirstRunPage />;
+
+  // Auth & Discovery Logic
+  if (location.pathname === '/register') return <RegistrationPage />;
   if (!session.currentUser) return <LoginPage />;
 
   return (
@@ -67,20 +70,24 @@ function AppRoutes() {
   );
 }
 
+import ThemeProvider from './components/ThemeProvider';
+
 export default function App() {
   return (
     <SettingsProvider>
-      <RBACProvider>
-        <AuthProvider>
-          <AppProvider>
-            <BrowserRouter>
-              <Routes>
-                <Route path="/*" element={<AppRoutes />} />
-              </Routes>
-            </BrowserRouter>
-          </AppProvider>
-        </AuthProvider>
-      </RBACProvider>
+      <ThemeProvider>
+        <RBACProvider>
+          <AuthProvider>
+            <AppProvider>
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/*" element={<AppRoutes />} />
+                </Routes>
+              </BrowserRouter>
+            </AppProvider>
+          </AuthProvider>
+        </RBACProvider>
+      </ThemeProvider>
     </SettingsProvider>
   );
 }

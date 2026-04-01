@@ -1,24 +1,53 @@
 import React, { useState } from 'react';
-import { CalendarDays, Plane } from 'lucide-react';
+import { CalendarDays, Plane, Printer } from 'lucide-react';
 
 import AttendancePage from './attendance/AttendancePage';
 import LeaveManagement from './attendance/LeaveManagement';
+import { useSettings } from '../contexts/SettingsContext';
 
 type Tab = 'attendance' | 'leaves';
 
 export default function AttendanceIndex() {
   const [activeTab, setActiveTab] = useState<Tab>('attendance');
+  const { settings } = useSettings();
 
   const tabs = [
     { id: 'attendance', label: 'Daily Attendance', icon: CalendarDays },
     { id: 'leaves', label: 'Leave Requests', icon: Plane },
   ] as const;
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
-      <div>
-        <h1 className="text-2xl font-bold text-white tracking-tight">Time & Attendance</h1>
-        <p className="text-slate-400 text-sm mt-1">Track working hours, breaks, and manage time off.</p>
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 print:hidden">
+        <div>
+          <h1 className="text-2xl font-bold text-white tracking-tight">Time & Attendance</h1>
+          <p className="text-slate-400 text-sm mt-1">Track working hours, breaks, and manage time off.</p>
+        </div>
+        <button 
+          onClick={handlePrint}
+          className="flex items-center gap-2 px-4 py-2 bg-slate-900 border border-slate-800 text-slate-400 hover:text-white rounded-xl transition-all font-bold text-xs uppercase tracking-widest"
+        >
+          <Printer className="w-4 h-4" />
+          Print Report
+        </button>
+      </div>
+
+      {/* Print Header (Visible only when printing) */}
+      <div className="hidden print:block border-b-2 border-slate-900 pb-6 mb-8">
+        <div className="flex justify-between items-end">
+            <div>
+                <h1 className="text-2xl font-black text-slate-900">{settings.branding.companyName}</h1>
+                <p className="text-sm font-bold text-slate-600 uppercase tracking-widest mt-1">Attendance & Workforce Report</p>
+            </div>
+            <div className="text-right">
+                <p className="text-xs font-bold text-slate-500 uppercase">Generated On</p>
+                <p className="text-sm font-black text-slate-900">{new Date().toLocaleString()}</p>
+            </div>
+        </div>
       </div>
 
       {/* Tabs Navigation */}

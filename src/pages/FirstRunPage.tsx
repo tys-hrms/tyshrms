@@ -53,7 +53,7 @@ export default function FirstRunPage() {
             <Package className="w-8 h-8 text-brand-400" />
           </div>
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-white">Welcome to TYS-HRMS</h1>
+            <h1 className="text-2xl font-bold text-white">Welcome to HRMSCore</h1>
             <p className="text-surface-400 text-sm mt-1">Set up your admin account to get started</p>
           </div>
         </div>

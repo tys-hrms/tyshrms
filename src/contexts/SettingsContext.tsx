@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { AppSettings, ShopifySettings, MongoSettings, Shift, LeaveAutomationSettings } from '../types';
+import { AppSettings, ShopifySettings, MongoSettings, Shift, LeaveAutomationSettings, BrandingSettings } from '../types';
 import { db } from '../lib/database';
 
 const STORAGE_KEY = 'tys_hrms_settings_v2';
@@ -10,6 +10,7 @@ function generateId(): string {
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
+  tenantId: '',
   shopify: {
     storeUrl: '',
     accessToken: '',
@@ -20,18 +21,25 @@ const DEFAULT_SETTINGS: AppSettings = {
     appId: '',
     apiKey: '',
     dataSource: 'mongodb-atlas',
-    database: 'tys_hrms',
+    database: 'hrmscore_saas',
     isEnabled: true,
   },
   leaveAutomation: {
     enabled: true,
     whatsappEnabled: true,
     emailEnabled: true,
-    whatsappTemplate: 'Hello {worker_name},\n\nYour leave request for {start_date} to {end_date} has been {status} by {reviewer_name}.\n\nReason: {reason}\n\nRegards,\nTYS Operations',
-    emailTemplate: 'Hello {worker_name},\n\nYour leave request for {start_date} to {end_date} has been {status} by {reviewer_name}.\n\nReason: {reason}\n\nRegards,\nTYS Operations',
+    whatsappTemplate: 'Hello {worker_name},\n\nYour leave request for {start_date} to {end_date} has been {status} by {reviewer_name}.\n\nReason: {reason}\n\nRegards,\nHRMSCore Operations',
+    emailTemplate: 'Hello {worker_name},\n\nYour leave request for {start_date} to {end_date} has been {status} by {reviewer_name}.\n\nReason: {reason}\n\nRegards,\nHRMSCore Operations',
   },
   workstations: [],
   locations: [],
+  branding: {
+    companyName: 'HRMSCore',
+    primaryColor: '#2d7cf6',
+    secondaryColor: '#14b8a6',
+    accentColor: '#f59e0b',
+    themeMode: 'dark',
+  }
 };
 
 const DEFAULT_SHIFTS: Shift[] = [];
@@ -40,11 +48,13 @@ interface SettingsContextType {
   settings: AppSettings;
   shifts: Shift[];
   isLoading: boolean;
+  updateSettings: (updates: Partial<AppSettings>) => void;
   updateShopify: (data: Partial<ShopifySettings>) => void;
   updateMongo: (data: Partial<MongoSettings>) => void;
   updateLeaveAutomation: (data: Partial<LeaveAutomationSettings>) => void;
   updateWorkstations: (data: AppSettings['workstations']) => void;
   updateLocations: (data: AppSettings['locations']) => void;
+  updateBranding: (data: Partial<BrandingSettings>) => void;
   syncShopifyProducts: () => Promise<{ success: boolean; count?: number; error?: string }>;
   addShift: (data: Omit<Shift, 'id' | 'createdAt'>) => void;
   updateShift: (id: string, data: Partial<Shift>) => void;
@@ -60,11 +70,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       if (!stored) return DEFAULT_SETTINGS;
       const parsed = JSON.parse(stored);
       return {
+        ...DEFAULT_SETTINGS,
+        ...parsed,
         shopify: { ...DEFAULT_SETTINGS.shopify, ...parsed.shopify },
         mongodb: { ...DEFAULT_SETTINGS.mongodb, ...parsed.mongodb || {} },
         leaveAutomation: { ...DEFAULT_SETTINGS.leaveAutomation, ...parsed.leaveAutomation || {} },
-        workstations: parsed.workstations || [],
-        locations: parsed.locations || [],
+        branding: { ...DEFAULT_SETTINGS.branding, ...parsed.branding || {} },
       };
     } catch { return DEFAULT_SETTINGS; }
   });
@@ -81,62 +92,55 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(settings)); }, [settings]);
   useEffect(() => { localStorage.setItem(STORAGE_KEY_SHIFTS, JSON.stringify(shifts)); }, [shifts]);
 
-  // --- Cloud Initialization ---
+  // --- Cloud Initialization (Tenant Scoped) ---
   useEffect(() => {
-    const loadCloudSettings = async () => {
-      // Use a timeout fallback for resilience
-      const timeout = setTimeout(() => {
-        console.warn('[SettingsSync] Timeout: Pulling from cloud took too long.');
-        setIsLoading(false);
-      }, 5000);
+    if (!settings.tenantId) {
+      setIsLoading(false);
+      return;
+    }
 
+    const loadCloudSettings = async () => {
+      setIsLoading(true);
       try {
         const [cSettings, cShifts] = await Promise.all([
-          db.getSingle<AppSettings & { _id?: any }>('app_settings'),
-          db.getAll<Shift>('shifts')
+          db.tenants.getSettings(settings.tenantId),
+          db.getAll<Shift>('shifts') // Shifts are currently global, but could be scoped too
         ]);
 
         if (cSettings) {
-          // Merge logic: prefer cloud, but keep local IDs and keys if needed
           setSettings(prev => ({ 
             ...prev, 
             ...cSettings,
-            // Ensure we don't accidentally wipe MongoDB settings if they're coming from cloud
-            mongodb: { ...prev.mongodb, ...cSettings.mongodb }
+            shopify: { ...prev.shopify, ...cSettings.shopify },
+            mongodb: { ...prev.mongodb, ...cSettings.mongodb },
+            branding: { ...prev.branding, ...cSettings.branding || {} }
           }));
         }
-
         if (cShifts.length) setShifts(cShifts);
-
       } catch (err) {
-        console.error('[SettingsSync] Failed to initialize from cloud:', err);
+        console.error('[SettingsSync] Failed:', err);
       } finally {
-        clearTimeout(timeout);
         setIsLoading(false);
       }
     };
 
     loadCloudSettings();
-  }, []);
+  }, [settings.tenantId]);
 
-  // --- Auto-Purge Legacy Demo Data ---
-  useEffect(() => {
-    const demoLocIds = ['loc1', 'loc2', 'loc3'];
-    const demoWsIds = ['ws1', 'ws2', 'ws3', 'ws4'];
+  const updateSettings = (updates: Partial<AppSettings>) => {
     setSettings(prev => {
-      const locations = prev.locations.filter(l => !demoLocIds.includes(l.id));
-      const workstations = prev.workstations.filter(w => !demoWsIds.includes(w.id));
-      if (locations.length !== prev.locations.length || workstations.length !== prev.workstations.length) {
-        return { ...prev, locations, workstations };
+      const next = { ...prev, ...updates };
+      if (next.tenantId) {
+        db.tenants.saveSettings(next.tenantId, next);
       }
-      return prev;
+      return next;
     });
-  }, []);
+  };
 
   const updateShopify = (data: Partial<ShopifySettings>) => {
     setSettings(prev => {
       const next = { ...prev, shopify: { ...prev.shopify, ...data } };
-      db.save('app_settings', { ...next, id: 'global_settings' });
+      if (next.tenantId) db.tenants.saveSettings(next.tenantId, next);
       return next;
     });
   };
@@ -144,7 +148,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const updateMongo = (data: Partial<MongoSettings>) => {
     setSettings(prev => {
       const next = { ...prev, mongodb: { ...prev.mongodb, ...data } };
-      db.save('app_settings', { ...next, id: 'global_settings' });
+      if (next.tenantId) db.tenants.saveSettings(next.tenantId, next);
       return next;
     });
   };
@@ -152,7 +156,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const updateLeaveAutomation = (data: Partial<LeaveAutomationSettings>) => {
     setSettings(prev => {
       const next = { ...prev, leaveAutomation: { ...prev.leaveAutomation, ...data } };
-      db.save('app_settings', { ...next, id: 'global_settings' });
+      if (next.tenantId) db.tenants.saveSettings(next.tenantId, next);
       return next;
     });
   };
@@ -160,7 +164,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const updateWorkstations = (data: AppSettings['workstations']) => {
     setSettings(prev => {
       const next = { ...prev, workstations: data };
-      db.save('app_settings', { ...next, id: 'global_settings' });
+      if (next.tenantId) db.tenants.saveSettings(next.tenantId, next);
       return next;
     });
   };
@@ -168,7 +172,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const updateLocations = (data: AppSettings['locations']) => {
     setSettings(prev => {
       const next = { ...prev, locations: data };
-      db.save('app_settings', { ...next, id: 'global_settings' });
+      if (next.tenantId) db.tenants.saveSettings(next.tenantId, next);
+      return next;
+    });
+  };
+
+  const updateBranding = (data: Partial<BrandingSettings>) => {
+    setSettings(prev => {
+      const next = { ...prev, branding: { ...prev.branding, ...data } };
+      if (next.tenantId) db.tenants.saveSettings(next.tenantId, next);
       return next;
     });
   };
@@ -203,7 +215,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   return (
     <SettingsContext.Provider value={{
       settings, shifts, isLoading,
-      updateShopify, updateMongo, updateLeaveAutomation, updateWorkstations, updateLocations,
+      updateSettings, updateShopify, updateMongo, updateLeaveAutomation, updateWorkstations, updateLocations, updateBranding,
       syncShopifyProducts,
       addShift, updateShift, deleteShift,
     }}>

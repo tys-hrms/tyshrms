@@ -1,51 +1,65 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Webcam from 'react-webcam';
 import * as faceDetection from '@tensorflow-models/face-detection';
-import '@tensorflow/tfjs-backend-webgl';
+import '@tensorflow-models/tfjs-backend-webgl';
 import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
-import { getCurrentPosition } from '../lib/location';
 import { 
-  Package, Lock, ChevronRight, Delete, Fingerprint, 
-  MapPin, Loader2, XCircle, Camera, UserCheck, 
-  ShieldAlert, Scan, Map as MapIcon, RotateCcw
+  Building2, 
+  Search, 
+  User as UserIcon, 
+  ShieldCheck, 
+  Lock, 
+  Eye, 
+  EyeOff, 
+  Delete, 
+  Camera, 
+  Scan,
+  XCircle,
+  Loader2,
+  ChevronRight,
+  ArrowLeft
 } from 'lucide-react';
 
 export default function LoginPage() {
-  const { login, clockIn, loginBiometric, users } = useAuth();
+  const navigate = useNavigate();
+  const { discoverTenant, loginAdmin, loginStaff, session, logout } = useAuth();
   const { settings } = useSettings();
 
-  // PIN State
-  const [pin, setPin] = useState('');
-  const [error, setError] = useState('');
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [shake, setShake] = useState(false);
-  const [biometricsSupported, setBiometricsSupported] = useState(false);
-  const maxPin = 6;
+  // Navigation State
+  const [phase, setPhase] = useState<'discovery' | 'auth'>('discovery');
+  const [loginMode, setLoginMode] = useState<'staff' | 'admin'>('staff');
 
-  // Face Detection State
+  // Discovery State
+  const [orgId, setOrgId] = useState('');
+  const [discoveryError, setDiscoveryError] = useState('');
+  const [isDiscovering, setIsDiscovering] = useState(false);
+
+  // Auth State
+  const [email, setEmail] = useState('');
+  const [pin, setPin] = useState('');
+  const [showPin, setShowPin] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+
+  // Face Detection State (for Staff)
   const webcamRef = useRef<Webcam>(null);
-  const [isCameraReady, setIsCameraReady] = useState(false);
-  const [faceDetected, setFaceDetected] = useState(false);
   const [detector, setDetector] = useState<faceDetection.FaceDetector | null>(null);
+  const [faceDetected, setFaceDetected] = useState(false);
+  const [isCameraReady, setIsCameraReady] = useState(false);
   const detectionInterval = useRef<NodeJS.Timeout | null>(null);
 
-  // Location State
-  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [isLocating, setIsLocating] = useState(false);
+  // Connection Status (Simulated based on context)
+  const isConnected = settings.mongodb.isEnabled;
 
-  // Initialize Biometrics & Face Detector
+  // Initialize Detector
   useEffect(() => {
-    if (window.PublicKeyCredential) {
-      setBiometricsSupported(true);
-    }
-
     const initFaceDetection = async () => {
       try {
-        const model = faceDetection.SupportedModels.MediaPipeFaceDetection;
-        const detectorConfig: faceDetection.MediaPipeFaceDetectionModelConfig = {
-          runtime: 'tfjs',
-          modelType: 'short',
+        const model = faceDetection.SupportedModels.MediaPipeFaceDetector;
+        const detectorConfig: faceDetection.MediaPipeFaceDetectorTfjsModelConfig = {
+          runtime: 'tfjs', modelType: 'short',
         };
         const newDetector = await faceDetection.createDetector(model, detectorConfig);
         setDetector(newDetector);
@@ -54,302 +68,378 @@ export default function LoginPage() {
       }
     };
     initFaceDetection();
-
     return () => {
       if (detectionInterval.current) clearInterval(detectionInterval.current);
     };
   }, []);
 
-  // Face Detection Loop
   const detectFace = useCallback(async () => {
-    if (detector && webcamRef.current && webcamRef.current.video?.readyState === 4) {
-      const video = webcamRef.current.video;
+    if (detector && webcamRef.current?.video?.readyState === 4) {
       try {
-        const faces = await detector.estimateFaces(video);
+        const faces = await detector.estimateFaces(webcamRef.current.video);
         setFaceDetected(faces.length > 0);
-      } catch (e) {
-        // silent fallback
-      }
-    } else if (!detector && isCameraReady) {
-      // Mock detection if model didn't load but camera is on (to avoid hard-locking if CDN fails)
-      setFaceDetected(true); 
+      } catch (e) { /* ignore */ }
     }
-  }, [detector, isCameraReady]);
+  }, [detector]);
 
   useEffect(() => {
-    if (isCameraReady) {
+    if (isCameraReady && loginMode === 'staff') {
       detectionInterval.current = setInterval(detectFace, 500);
+    } else {
+      if (detectionInterval.current) clearInterval(detectionInterval.current);
     }
     return () => {
       if (detectionInterval.current) clearInterval(detectionInterval.current);
     };
-  }, [isCameraReady, detectFace]);
+  }, [isCameraReady, detectFace, loginMode]);
 
-  // Handle Geolocation
-  const requestLocation = async () => {
-    setIsLocating(true);
-    try {
-      const coords = await getCurrentPosition();
-      setUserCoords(coords);
-      return coords;
-    } catch (err: any) {
-      return null;
-    } finally {
-      setIsLocating(false);
-    }
-  };
-
-  const handleBiometricLogin = async () => {
-    setError('');
-    setIsVerifying(true);
-    try {
-      const res = await loginBiometric();
-      if (!res.success) {
-        setError(res.error || 'Biometric login failed');
-      }
-    } catch (err) {
-      setError('An unexpected error occurred during biometric login');
-    } finally {
-      setIsVerifying(false);
-    }
-  };
-
-  const handleLogin = async (currentPin: string) => {
-    setError('');
-    const user = users.find(u => u.pinCode === currentPin);
-    
-    if (!user || !user.isActive) {
-      setError(user ? 'Account inactive' : 'Invalid PIN');
-      setPin('');
-      setShake(true);
-      setTimeout(() => setShake(false), 800);
+  // Actions
+  const handleDiscovery = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setDiscoveryError('');
+    if (!/^\d{6}$/.test(orgId)) {
+      setDiscoveryError('Organization ID must be 6 digits');
       return;
     }
 
-    setIsVerifying(true);
+    setIsDiscovering(true);
     try {
-      let coords = userCoords;
-      const needsLoc = user.role !== 'Admin';
-      const isBypassed = user.geofenceBypassUntil && new Date(user.geofenceBypassUntil) > new Date();
-      
-      if (needsLoc && !isBypassed && !coords) {
-        coords = await requestLocation();
-        if (!coords) {
-          setError('Location verification is required for access.');
-          setIsVerifying(false);
-          return;
-        }
-      }
-
-      const res = login(currentPin, faceDetected, coords || undefined);
-      
+      const res = await discoverTenant(orgId);
       if (res.success) {
-        if (user.role === 'Worker') {
-          clockIn(undefined, 'manual');
-        }
+        setPhase('auth');
       } else {
-        setError(res.error || 'Login failed');
-        setPin('');
-        setShake(true);
-        setTimeout(() => setShake(false), 800);
+        setDiscoveryError(res.error || 'Organization not found');
       }
     } finally {
-      setIsVerifying(false);
+      setIsDiscovering(false);
     }
   };
 
-  const handleDigit = (digit: string) => {
-    if (pin.length >= maxPin) return;
-    setError('');
-    setPin(pin + digit);
-  };
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError('');
+    if (!email || !pin) {
+      setAuthError('Email and PIN are required');
+      return;
+    }
 
-  const handleLoginSubmit = () => {
-    if (pin.length >= 4 && pin.length <= maxPin) {
-      handleLogin(pin);
+    setIsAuthenticating(true);
+    try {
+      const res = await loginAdmin(email, pin);
+      if (res.success) {
+        navigate('/');
+      } else {
+        setAuthError(res.error || 'Authentication failed');
+      }
+    } finally {
+      setIsAuthenticating(false);
     }
   };
 
-  const handleDelete = () => {
-    setPin(prev => prev.slice(0, -1));
-    setError('');
+  const handleStaffPin = (digit: string) => {
+    if (pin.length >= 6) return;
+    setPin(prev => prev + digit);
   };
+
+  const handleStaffLogin = async () => {
+    setAuthError('');
+    if (!faceDetected) {
+      setAuthError('Face recognition required for Staff login.');
+      return;
+    }
+    if (pin.length < 4) {
+      setAuthError('Please enter your 4-6 digit access PIN.');
+      return;
+    }
+
+    setIsAuthenticating(true);
+    try {
+      const res = await loginStaff(pin, faceDetected);
+      if (res.success) {
+        navigate('/');
+      } else {
+        setAuthError(res.error || 'Invalid PIN or Access Denied');
+        setPin('');
+      }
+    } finally {
+      setIsAuthenticating(false);
+    }
+  };
+
+  const resetDiscovery = () => {
+    logout();
+    setPhase('discovery');
+    setOrgId('');
+    setPin('');
+    setEmail('');
+  };
+
+  // UI Reusable Components
+  const PinPad = () => (
+    <div className="grid grid-cols-3 gap-2 mt-4">
+      {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => (
+        <button
+          key={n}
+          type="button"
+          onClick={() => handleStaffPin(n.toString())}
+          className="h-14 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xl transition-colors border border-slate-700"
+        >
+          {n}
+        </button>
+      ))}
+      <button
+        type="button"
+        onClick={() => setPin('')}
+        className="h-14 bg-slate-900 text-slate-500 font-bold border border-slate-800"
+      >
+        CLR
+      </button>
+      <button
+        type="button"
+        onClick={() => handleStaffPin('0')}
+        className="h-14 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xl border border-slate-700"
+      >
+        0
+      </button>
+      <button
+        type="button"
+        onClick={() => setPin(p => p.slice(0, -1))}
+        className="h-14 bg-slate-900 flex items-center justify-center text-slate-400 border border-slate-800"
+      >
+        <Delete className="w-5 h-5" />
+      </button>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 relative overflow-hidden font-inter">
-      {/* Dynamic Background */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-teal-500/10 rounded-full blur-[100px] animate-pulse" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-custom-blue/10 rounded-full blur-[100px] animate-pulse" />
-
-      <div className="w-full max-w-sm relative z-10">
-        
-        {/* Logo & Header */}
-        <div className="flex flex-col items-center mb-8">
-          <div className="w-14 h-14 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-center mb-4 shadow-xl relative group">
-            <div className="absolute inset-0 bg-teal-400/20 rounded-2xl blur-xl group-hover:bg-teal-400/30 transition-all" />
-            <Package className="w-7 h-7 text-teal-400" />
-          </div>
-          <h1 className="text-2xl font-black text-white tracking-tight mb-1">TYS-HRMS</h1>
-          <div className="flex items-center gap-2 text-slate-500 text-[10px] font-bold uppercase tracking-widest">
-            <Scan className="w-3 h-3" />
-            Face & Proximity Security
-          </div>
-        </div>
-
-        {/* Auth Module */}
-        <div className="bg-slate-900/80 backdrop-blur-3xl border border-slate-800/50 rounded-[40px] p-1 shadow-2xl relative">
+    <div className="min-h-screen bg-slate-950 flex flex-col font-inter">
+      <div className="flex-1 flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-slate-900 border border-slate-800 relative shadow-2xl">
           
-          {/* Camera Feed Container */}
-          <div className="relative aspect-[4/3] rounded-[38px] overflow-hidden bg-slate-950 border border-slate-800/50 group">
-            <Webcam
-              ref={webcamRef}
-              audio={false}
-              onUserMedia={() => setIsCameraReady(true)}
-              onUserMediaError={() => setError('Camera access denied')}
-              className="w-full h-full object-cover grayscale brightness-75 group-hover:grayscale-0 transition-all duration-700"
-              videoConstraints={{ facingMode: 'user' }}
-            />
-            
-            {/* Overlay UI */}
-            <div className="absolute inset-0 flex flex-col justify-between p-6 bg-gradient-to-t from-slate-950/80 via-transparent to-slate-950/40">
-              {/* Top Status */}
-              <div className="flex justify-between items-start">
-                <div className={`px-3 py-1.5 rounded-full border text-[10px] font-bold flex items-center gap-2 backdrop-blur-md transition-all ${
-                  faceDetected 
-                    ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400' 
-                    : 'bg-orange-500/10 border-orange-500/20 text-orange-400'
-                }`}>
-                  <div className={`w-1.5 h-1.5 rounded-full ${faceDetected ? 'bg-emerald-500 animate-pulse' : 'bg-orange-500'}`} />
-                  {faceDetected ? 'FACE DETECTED' : 'SCANNING FOR FACE...'}
-                </div>
-                
-                <button onClick={() => window.location.reload()} className="p-2 bg-slate-900/50 hover:bg-slate-800 rounded-full border border-slate-800 text-slate-400 transition-all active:rotate-180">
-                  <RotateCcw className="w-3 h-3" />
-                </button>
-              </div>
+          {/* Header */}
+          <div className="p-8 border-b border-slate-800 text-center">
+            <h1 className="text-2xl font-black text-white uppercase tracking-tighter">HRMSCore</h1>
+            <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] mt-1 font-bold">Workforce Management System</p>
+          </div>
 
-              {/* Bottom Status (Geofence) */}
-              <div className="flex items-center justify-center">
-                <div className={`px-4 py-2 rounded-2xl border backdrop-blur-xl flex items-center gap-3 transition-all ${
-                  userCoords 
-                    ? 'bg-custom-blue/20 border-custom-blue/30 text-custom-blue' 
-                    : 'bg-slate-900/60 border-slate-800 text-slate-400'
-                }`}>
-                  {isLocating ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : userCoords ? (
-                    <MapIcon className="w-4 h-4" />
-                  ) : (
-                    <MapPin className="w-4 h-4 opacity-50" />
+          <div className="p-8">
+            {phase === 'discovery' ? (
+              /* PHASE 1: DISCOVERY */
+              <form onSubmit={handleDiscovery} className="space-y-6">
+                <div className="text-center mb-4">
+                  <h2 className="text-white font-bold text-lg">Identify Organization</h2>
+                  <p className="text-slate-500 text-xs mt-1">Enter your unique 6-digit organization code</p>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="relative">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                    <input
+                      type="text"
+                      value={orgId}
+                      onChange={e => setOrgId(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="Organization ID"
+                      className="w-full bg-slate-950 border border-slate-800 p-4 pl-12 text-center text-2xl font-mono font-black text-brand-400 tracking-[0.3em] focus:border-brand-500 outline-none transition-colors"
+                      inputMode="numeric"
+                      autoFocus
+                    />
+                  </div>
+
+                  {discoveryError && (
+                    <div className="bg-red-500/10 border border-red-500/20 p-3 text-red-400 text-xs font-bold text-center">
+                      {discoveryError}
+                    </div>
                   )}
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-black uppercase leading-tight">Geofence Status</span>
-                    <span className="text-xs font-medium">{userCoords ? 'ZONE VERIFIED' : isLocating ? 'LOCATING...' : 'WAITING FOR LOGIN'}</span>
+
+                  <button
+                    type="submit"
+                    disabled={isDiscovering || orgId.length < 6}
+                    className="w-full py-4 bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white font-bold uppercase tracking-widest transition-all"
+                  >
+                    {isDiscovering ? 'Searching...' : 'Continue'}
+                  </button>
+
+                  <div className="pt-4 text-center">
+                    <button
+                      type="button"
+                      onClick={() => navigate('/register')}
+                      className="text-xs text-slate-500 hover:text-brand-400 font-bold uppercase tracking-widest"
+                    >
+                      New Organization? Register Now
+                    </button>
                   </div>
                 </div>
-              </div>
-
-              {/* Scanner Simulation */}
-              {faceDetected && (
-                <div className="absolute inset-0 pointer-events-none">
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 border-2 border-emerald-500/50 rounded-full animate-ping opacity-20" />
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 border-2 border-emerald-500/30 rounded-full" />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* PIN Pad Area */}
-          <div className="p-8">
-            <div className={`flex justify-center gap-3 mb-8 ${shake ? 'animate-[shake_0.4s_ease-in-out]' : ''}`}>
-              {[...Array(maxPin)].map((_, i) => (
-                <div 
-                  key={i}
-                  className={`w-3.5 h-3.5 rounded-full border-2 transition-all duration-300 ${
-                    i < pin.length 
-                      ? 'bg-custom-blue border-custom-blue shadow-[0_0_15px_rgba(45,124,246,0.6)] scale-125' 
-                      : 'border-slate-800 bg-slate-900/50'
-                  }`}
-                />
-              ))}
-            </div>
-
-            {error ? (
-              <div className="mb-6 p-4 rounded-2xl border flex items-start gap-4 text-xs font-semibold bg-red-500/10 border-red-500/10 text-red-400 animate-in slide-in-from-top-2 duration-300">
-                <ShieldAlert className="w-5 h-5 shrink-0 opacity-80" />
-                <div className="flex-1 leading-relaxed">{error}</div>
-              </div>
+              </form>
             ) : (
-                <p className="text-center text-slate-500 text-xs font-medium mb-6 uppercase tracking-widest">Enter Access Code</p>
-            )}
+              /* PHASE 2: AUTHENTICATION */
+              <div className="space-y-6">
+                {/* Organization Context */}
+                <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-800">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-brand-500/20 border border-brand-500/30 flex items-center justify-center">
+                      <Building2 className="w-5 h-5 text-brand-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-white font-bold text-sm uppercase leading-none">{session.tenant?.name}</h3>
+                      <span className="text-[10px] text-slate-500 font-mono tracking-wider">{session.tenant?.id}</span>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={resetDiscovery}
+                    className="p-2 text-slate-500 hover:text-white"
+                    title="Change Organization"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                  </button>
+                </div>
 
-            <div className="grid grid-cols-3 gap-3">
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-                <button
-                  key={num}
-                  onClick={() => handleDigit(num.toString())}
-                  className="h-14 rounded-2xl bg-slate-800/30 border border-slate-700/30 text-xl font-bold text-white hover:bg-slate-800/80 hover:border-slate-600 active:scale-90 transition-all font-inter"
-                >
-                  {num}
-                </button>
-              ))}
-              <div className="col-start-2">
-                <button
-                  onClick={() => handleDigit('0')}
-                  className="w-full h-14 rounded-2xl bg-slate-800/30 border border-slate-700/30 text-xl font-bold text-white hover:bg-slate-800/80 hover:border-slate-600 active:scale-90 transition-all font-inter"
-                >
-                  0
-                </button>
-              </div>
-              <div className="col-start-3">
-                <button
-                  onClick={handleDelete}
-                  className="w-full h-14 rounded-2xl bg-slate-800/30 border border-slate-700/30 flex items-center justify-center text-slate-500 hover:text-white hover:bg-red-500/20 active:scale-90 transition-all"
-                >
-                  <Delete className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
+                {/* Login Mode Toggle */}
+                <div className="grid grid-cols-2 bg-slate-950 p-1 mb-6">
+                  <button
+                    onClick={() => { setLoginMode('staff'); setPin(''); }}
+                    className={`py-3 text-[10px] font-black uppercase tracking-widest transition-all ${loginMode === 'staff' ? 'bg-brand-500 text-white' : 'text-slate-500 hover:text-slate-300'}`}
+                  >
+                    Staff Portal
+                  </button>
+                  <button
+                    onClick={() => { setLoginMode('admin'); setPin(''); }}
+                    className={`py-3 text-[10px] font-black uppercase tracking-widest transition-all ${loginMode === 'admin' ? 'bg-brand-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}
+                  >
+                    Admin Login
+                  </button>
+                </div>
 
-            <div className="mt-8 flex flex-col gap-3">
-              <button
-                onClick={handleLoginSubmit}
-                disabled={pin.length < 4 || isVerifying || (!faceDetected && !detector)}
-                className="w-full bg-custom-blue hover:bg-blue-600 active:scale-95 disabled:bg-slate-800/50 disabled:text-slate-600 text-white font-black py-4 rounded-3xl shadow-xl shadow-custom-blue/20 flex items-center justify-center transition-all duration-300 text-sm uppercase tracking-widest"
-              >
-                {isVerifying ? (
-                  <>
-                    <Loader2 className="w-5 h-5 mr-3 animate-spin" />
-                    Validating...
-                  </>
-                ) : (
-                  <>
-                    Sign In Securely
-                    <ChevronRight className="w-5 h-5 ml-2 opacity-50" />
-                  </>
+                {authError && (
+                  <div className="bg-red-500/10 border border-red-500/20 p-3 text-red-400 text-xs font-bold text-center">
+                    {authError}
+                  </div>
                 )}
-              </button>
 
-              {biometricsSupported && (
-                <button
-                  onClick={handleBiometricLogin}
-                  className="w-full py-3 rounded-2xl bg-slate-900/50 hover:bg-slate-800 border border-slate-800 text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center justify-center transition-all leading-none"
-                >
-                  <Fingerprint className="w-3.5 h-3.5 mr-2 text-custom-blue/60" />
-                  Use Device Fingerprint
-                </button>
-              )}
-            </div>
+                {loginMode === 'admin' ? (
+                  /* ADMIN LOGIN */
+                  <form onSubmit={handleAdminLogin} className="space-y-5">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Email Address</label>
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={e => setEmail(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 p-3 text-white focus:border-brand-500 outline-none"
+                        placeholder="admin@company.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Security PIN</label>
+                       <div className="relative">
+                        <input
+                          type={showPin ? 'text' : 'password'}
+                          value={pin}
+                          onChange={e => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                          className="w-full bg-slate-950 border border-slate-800 p-3 text-white focus:border-brand-500 outline-none pr-12 text-center tracking-[0.5em] font-mono"
+                          placeholder="••••••"
+                          inputMode="numeric"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPin(!showPin)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"
+                        >
+                          {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                       </div>
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={isAuthenticating}
+                      className="w-full py-4 bg-brand-500 hover:bg-brand-600 text-white font-bold uppercase tracking-widest"
+                    >
+                      {isAuthenticating ? 'Verifying...' : 'Unlock Dashboard'}
+                    </button>
+                  </form>
+                ) : (
+                  /* STAFF LOGIN */
+                  <div className="space-y-6">
+                    {/* Camera */}
+                    <div className="relative aspect-video bg-black border border-slate-800 overflow-hidden group">
+                      <Webcam
+                        ref={webcamRef}
+                        audio={false}
+                        onUserMedia={() => setIsCameraReady(true)}
+                        className="w-full h-full object-cover grayscale brightness-75 group-hover:grayscale-0 transition-all duration-700"
+                        videoConstraints={{ facingMode: 'user' }}
+                      />
+                      <div className="absolute inset-0 flex flex-col justify-between p-4 bg-gradient-to-t from-slate-900/60 to-transparent">
+                          <div className={`self-start px-2 py-1 text-[8px] font-black uppercase tracking-widest flex items-center gap-2 border ${faceDetected ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400' : 'bg-slate-950/80 border-slate-800 text-slate-500'}`}>
+                            <div className={`w-1.5 h-1.5 rounded-full ${faceDetected ? 'bg-emerald-500 animate-pulse' : 'bg-slate-700'}`} />
+                            {faceDetected ? 'FACE DETECTED' : 'AWAITING FACE'}
+                          </div>
+                      </div>
+                      
+                      {/* Scanning Line Effect */}
+                      <div className="absolute top-0 left-0 w-full h-[2px] bg-brand-400/50 blur-[1px] animate-[scan_2s_linear_infinite]" />
+                    </div>
+
+                    {/* PIN Display */}
+                    <div className="flex justify-center gap-3">
+                      {[...Array(6)].map((_, i) => (
+                        <div 
+                          key={i}
+                          className={`w-3.5 h-3.5 border-2 transition-all duration-300 ${
+                            i < pin.length 
+                              ? 'bg-brand-400 border-brand-400 shadow-[0_0_10px_rgba(45,124,246,0.6)]' 
+                              : 'border-slate-800 bg-slate-950'
+                          }`}
+                        />
+                      ))}
+                    </div>
+
+                    <PinPad />
+
+                    <button
+                      onClick={handleStaffLogin}
+                      disabled={isAuthenticating || pin.length < 4}
+                      className="w-full py-4 bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white font-black uppercase tracking-widest flex items-center justify-center gap-3"
+                    >
+                      {isAuthenticating ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          Validating IDENTITY...
+                        </>
+                      ) : (
+                        <>
+                          Confirm PIN & Clock In
+                          <ShieldCheck className="w-5 h-5" />
+                        </>
+                      )}
+                    </button>
+                    
+                    <p className="text-[10px] text-slate-500 text-center uppercase tracking-widest">
+                      Biometric-first authentication enabled
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
+
+          {/* Connection Indicator - 3pt Bold Line */}
+          <div 
+            className={`h-[3px] w-full transition-colors duration-500 ${isConnected ? 'bg-emerald-500' : 'bg-red-500'}`}
+            title={isConnected ? 'Cloud Protocol Active' : 'Offline Mode Only'}
+          />
         </div>
       </div>
 
+      <div className="py-6 flex flex-col items-center opacity-40">
+        <p className="text-[9px] text-slate-500 uppercase tracking-[0.4em] font-black">
+          HRMSCore SaaS Portal v2.0
+        </p>
+      </div>
+
       <style>{`
-        @keyframes shake {
-          10%, 90% { transform: translate3d(-1px, 0, 0); }
-          20%, 80% { transform: translate3d(2px, 0, 0); }
-          30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
-          40%, 60% { transform: translate3d(4px, 0, 0); }
+        @keyframes scan {
+          0% { transform: translateY(0); }
+          100% { transform: translateY(180px); }
         }
       `}</style>
     </div>

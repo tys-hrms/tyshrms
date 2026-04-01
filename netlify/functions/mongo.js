@@ -1,16 +1,16 @@
-// netlify/functions/mongo.js — TYS-HRMS Universal MongoDB Serverless Function
+// netlify/functions/mongo.js — HRMSCore Universal MongoDB Serverless Function
 // Adapted for Netlify from the original Vercel /api/mongo.js handler.
 
 import { MongoClient, ObjectId } from 'mongodb';
 
 const MONGODB_URI = process.env.MONGODB_URI;
-const DB_NAME = process.env.MONGODB_DB || 'tys_hrms';
+const DB_NAME = process.env.MONGODB_DB || 'hrmscore_saas';
 
 const ALLOWED_COLLECTIONS = new Set([
   'users', 'products', 'assignments', 'worklogs', 'dispatches', 'leaves',
   'tasks', 'attendance', 'breaks', 'carry_forwards', 'app_settings',
   'defect_reasons', 'workflow_nodes', 'workflow_edges', 'notifications',
-  'challenges', 'rbac_permissions', 'shifts',
+  'challenges', 'rbac_permissions', 'shifts', 'tenants',
 ]);
 
 const headers = {
