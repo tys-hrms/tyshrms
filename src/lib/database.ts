@@ -52,8 +52,8 @@ export const db = {
 
   /** ── Users ── */
   users: {
-    find: (filter = {}) => callMongoClient('find', 'users', { filter }),
-    findOne: (filter: Record<string, unknown>) => callMongoClient('findOne', 'users', { filter }),
+    find: (filter = {}) => callMongoClient('find', 'users', { filter }).then(r => r.documents || []),
+    findOne: (filter: Record<string, unknown>) => callMongoClient('findOne', 'users', { filter }).then(r => r.document),
     insert: (document: Record<string, unknown>) => callMongoClient('insertOne', 'users', { document }),
     update: (filter: Record<string, unknown>, update: Record<string, unknown>) => callMongoClient('updateOne', 'users', { filter, update }),
     delete: (filter: Record<string, unknown>) => callMongoClient('deleteOne', 'users', { filter }),
@@ -61,14 +61,14 @@ export const db = {
 
   /** ── Products ── */
   products: {
-    find: (filter = {}) => callMongoClient('find', 'products', { filter }),
+    find: (filter = {}) => callMongoClient('find', 'products', { filter }).then(r => r.documents || []),
     insert: (document: Record<string, unknown>) => callMongoClient('insertOne', 'products', { document }),
     update: (filter: Record<string, unknown>, update: Record<string, unknown>) => callMongoClient('updateOne', 'products', { filter, update }),
   },
 
   /** ── Assignments ── */
   assignments: {
-    find: (filter = {}) => callMongoClient('find', 'assignments', { filter }),
+    find: (filter = {}) => callMongoClient('find', 'assignments', { filter }).then(r => r.documents || []),
     insert: (document: Record<string, unknown>) => callMongoClient('insertOne', 'assignments', { document }),
     update: (filter: Record<string, unknown>, update: Record<string, unknown>) => callMongoClient('updateOne', 'assignments', { filter, update }),
     delete: (filter: Record<string, unknown>) => callMongoClient('deleteOne', 'assignments', { filter }),
@@ -76,15 +76,15 @@ export const db = {
 
   /** ── Attendance & Breaks ── */
   attendance: {
-    find: (filter = {}) => callMongoClient('find', 'attendance', { filter }),
+    find: (filter = {}) => callMongoClient('find', 'attendance', { filter }).then(r => r.documents || []),
     insert: (document: Record<string, unknown>) => callMongoClient('insertOne', 'attendance', { document }),
     update: (filter: Record<string, unknown>, update: Record<string, unknown>) => callMongoClient('updateOne', 'attendance', { filter, update }),
   },
 
   /** ── Tenants ── */
   tenants: {
-    find: (filter = {}) => callMongoClient('find', 'tenants', { filter }),
-    findOne: (filter: Record<string, unknown>) => callMongoClient('findOne', 'tenants', { filter }),
+    find: (filter = {}) => callMongoClient('find', 'tenants', { filter }).then(r => r.documents || []),
+    findOne: (filter: Record<string, unknown>) => callMongoClient('findOne', 'tenants', { filter }).then(r => r.document),
     insert: (document: Record<string, unknown>) => callMongoClient('insertOne', 'tenants', { document }),
     
     // SaaS Specific: Fetch all data for a specific tenantId

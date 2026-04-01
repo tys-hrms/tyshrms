@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Webcam from 'react-webcam';
 import * as faceDetection from '@tensorflow-models/face-detection';
-import '@tensorflow-models/tfjs-backend-webgl';
+import '@tensorflow/tfjs-backend-webgl';
 import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { 
