@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useRBAC } from '../contexts/RBACContext';
 import { useSettings } from '../contexts/SettingsContext';
-import { UserPlus, Search, Edit2, Trash2, Shield, User as UserIcon, Building2, Briefcase, Key, MapPin } from 'lucide-react';
+import { UserPlus, Search, Edit2, Trash2, Shield, User as UserIcon, Building2, Briefcase, Key, MapPin, Clock, ShieldOff } from 'lucide-react';
 import UserRegistrationForm from './users/UserRegistrationForm';
 
 export default function UsersPage() {
-  const { users, updateUser, deleteUser, session } = useAuth();
+  const { users, updateUser, deleteUser, session, setGeofenceBypass } = useAuth();
   const { can } = useRBAC();
   const { settings } = useSettings();
   
@@ -30,6 +30,10 @@ export default function UsersPage() {
       case 'Manager': return <Building2 className="w-4 h-4 text-custom-blue" />;
       default: return <Briefcase className="w-4 h-4 text-teal-400" />;
     }
+  };
+
+  const isBypassed = (user: any) => {
+    return user.geofenceBypassUntil && new Date(user.geofenceBypassUntil) > new Date();
   };
 
   return (
@@ -67,7 +71,7 @@ export default function UsersPage() {
       {/* Edit User Modal */}
       {editingUser && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 animate-in fade-in zoom-in duration-200">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 animate-in fade-in zoom-in duration-200 overflow-y-auto max-h-[90vh]">
             <h3 className="text-xl font-bold text-white mb-4">Edit User</h3>
             <div className="space-y-4">
               <div>
@@ -128,6 +132,47 @@ export default function UsersPage() {
                   ))}
                 </select>
               </div>
+
+              {/* Geofence Bypass Feature */}
+              {editingUser.role !== 'Admin' && (
+                <div className="bg-orange-500/5 border border-orange-500/10 rounded-xl p-4 mt-4">
+                    <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2 text-orange-400">
+                            <ShieldOff className="w-4 h-4" />
+                            <span className="text-xs font-bold uppercase tracking-wider">Emergency Bypass</span>
+                        </div>
+                        {isBypassed(editingUser) && (
+                            <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-[10px] font-bold rounded">ACTIVE</span>
+                        )}
+                    </div>
+                    <p className="text-[10px] text-slate-500 mb-4 leading-relaxed">
+                        Grant this user a temporary 24-hour exemption from geofencing if their GPS is malfunctioning.
+                    </p>
+                    <button 
+                        onClick={() => {
+                            const until = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+                            setEditingUser({...editingUser, geofenceBypassUntil: until});
+                        }}
+                        className={`w-full py-2 rounded-lg text-[10px] font-bold transition-all border ${
+                            isBypassed(editingUser) 
+                            ? 'bg-slate-800 border-slate-700 text-slate-400' 
+                            : 'bg-orange-500/10 border-orange-500/20 text-orange-400 hover:bg-orange-500 hover:text-white'
+                        }`}
+                    >
+                        {isBypassed(editingUser) ? 'EXTEND BYPASS (24H)' : 'GRANT 24H BYPASS'}
+                    </button>
+                    {isBypassed(editingUser) && (
+                        <div className="mt-2 text-center">
+                             <button 
+                                onClick={() => setEditingUser({...editingUser, geofenceBypassUntil: undefined})}
+                                className="text-[9px] text-slate-500 hover:text-red-400 underline underline-offset-2"
+                             >
+                                Remove Bypass Early
+                             </button>
+                        </div>
+                    )}
+                </div>
+              )}
 
               <div className="flex items-center gap-2 pt-2">
                 <input 
@@ -202,6 +247,12 @@ export default function UsersPage() {
                               {user.name}
                               {user.id === session.currentUser?.id && (
                                 <span className="ml-2 px-2 py-0.5 rounded text-[10px] font-bold bg-custom-blue/20 text-custom-blue">YOU</span>
+                              )}
+                              {isBypassed(user) && (
+                                <span className="ml-2 flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-black bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                                    <ShieldOff className="w-2.5 h-2.5" />
+                                    BYPASSED
+                                </span>
                               )}
                             </div>
                             <div className="text-xs text-slate-400 mt-1 flex flex-wrap items-center gap-2">

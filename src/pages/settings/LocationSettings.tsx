@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useSettings } from '../../contexts/SettingsContext';
-import { Plus, Trash2, Edit2, MapPin, Building2, Store } from 'lucide-react';
+import { Plus, Trash2, Edit2, MapPin, Building2, Store, Map as MapIcon, Globe, ShieldCheck } from 'lucide-react';
 import { Location, LocationType } from '../../types';
+import { extractCoordsFromIframe } from '../../lib/location';
 
 function generateId(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -12,13 +13,30 @@ export default function LocationSettings() {
   const locations = settings.locations || [];
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [mapIframe, setMapIframe] = useState('');
 
   const [formData, setFormData] = useState<Omit<Location, 'id'>>({
     name: '',
     type: 'branch',
     address: '',
     isPrimary: false,
+    latitude: 0,
+    longitude: 0,
+    geofenceRadius: 50,
   });
+
+  const handleIframePaste = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setMapIframe(val);
+    const coords = extractCoordsFromIframe(val);
+    if (coords) {
+      setFormData(prev => ({
+        ...prev,
+        latitude: coords.lat,
+        longitude: coords.lng
+      }));
+    }
+  };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +50,8 @@ export default function LocationSettings() {
     
     setIsAdding(false);
     setEditingId(null);
-    setFormData({ name: '', type: 'branch', address: '', isPrimary: false });
+    setMapIframe('');
+    setFormData({ name: '', type: 'branch', address: '', isPrimary: false, latitude: 0, longitude: 0, geofenceRadius: 50 });
   };
 
   const startEdit = (w: Location) => {
@@ -42,6 +61,9 @@ export default function LocationSettings() {
       type: w.type, 
       address: w.address || '', 
       isPrimary: w.isPrimary || false,
+      latitude: w.latitude || 0,
+      longitude: w.longitude || 0,
+      geofenceRadius: w.geofenceRadius || 50,
     });
     setIsAdding(true);
   };
@@ -65,7 +87,8 @@ export default function LocationSettings() {
   const handleResetForm = () => {
     setIsAdding(false); 
     setEditingId(null); 
-    setFormData({ name: '', type: 'branch', address: '', isPrimary: false });
+    setMapIframe('');
+    setFormData({ name: '', type: 'branch', address: '', isPrimary: false, latitude: 0, longitude: 0, geofenceRadius: 50 });
   };
 
   return (
@@ -73,7 +96,7 @@ export default function LocationSettings() {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-xl font-bold text-white tracking-tight">Organization Locations</h2>
-          <p className="text-sm text-slate-400 mt-1">Define your Headquarters and regional warehouses.</p>
+          <p className="text-sm text-slate-400 mt-1">Define your Headquarters and regional warehouses with Geofencing.</p>
         </div>
         {!isAdding && (
           <button
@@ -90,6 +113,22 @@ export default function LocationSettings() {
           <h3 className="text-lg font-bold text-white mb-4">{editingId ? 'Edit Location' : 'New Location'}</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
+            <div className="md:col-span-2">
+                <div className="bg-slate-800/30 border border-slate-700/50 rounded-2xl p-4 mb-2">
+                    <div className="flex items-center gap-2 text-custom-blue mb-2">
+                        <MapIcon className="w-4 h-4" />
+                        <label className="text-sm font-bold uppercase tracking-wider">Auto-Sync from Google Maps</label>
+                    </div>
+                    <p className="text-xs text-slate-400 mb-3">Paste the Google Maps "Embed a map" iframe HTML here to automatically extract coordinates.</p>
+                    <textarea 
+                        placeholder='<iframe src="https://www.google.com/maps/embed?..." ...></iframe>'
+                        value={mapIframe}
+                        onChange={handleIframePaste}
+                        className="w-full h-20 bg-slate-950/50 border border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-300 focus:border-custom-blue outline-none font-mono"
+                    />
+                </div>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">Location Name</label>
               <input required type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:border-custom-blue outline-none" />
@@ -105,6 +144,22 @@ export default function LocationSettings() {
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-slate-300 mb-2">Full Address</label>
               <input type="text" value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:border-custom-blue outline-none" />
+            </div>
+
+            {/* Geofencing Fields */}
+            <div className="md:col-span-2 grid grid-cols-3 gap-4 bg-slate-800/20 p-4 rounded-xl border border-slate-800">
+                <div>
+                    <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1.5">Latitude</label>
+                    <input type="number" step="any" value={formData.latitude} onChange={e => setFormData({ ...formData, latitude: parseFloat(e.target.value) || 0 })} className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-custom-blue outline-none" />
+                </div>
+                <div>
+                    <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1.5">Longitude</label>
+                    <input type="number" step="any" value={formData.longitude} onChange={e => setFormData({ ...formData, longitude: parseFloat(e.target.value) || 0 })} className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-custom-blue outline-none" />
+                </div>
+                <div>
+                    <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1.5">Radius (Meters)</label>
+                    <input type="number" value={formData.geofenceRadius} onChange={e => setFormData({ ...formData, geofenceRadius: parseInt(e.target.value) || 50 })} className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-custom-blue outline-none" />
+                </div>
             </div>
             
             <div className="md:col-span-2">
@@ -126,7 +181,10 @@ export default function LocationSettings() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-10">
         {locations.map(loc => (
-          <div key={loc.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition-colors group relative">
+          <div key={loc.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition-colors group relative overflow-hidden">
+            {/* Geofence Status Indicator */}
+            <div className="absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 bg-custom-blue/5 rounded-full blur-2xl" />
+            
             <div className="flex justify-between items-start mb-3 relative">
               <div>
                 <div className="flex items-center gap-2 mb-1 text-[10px] uppercase font-bold text-slate-300">
@@ -143,8 +201,18 @@ export default function LocationSettings() {
               </div>
             </div>
             
-            <div className="space-y-4">
+            <div className="space-y-4 relative">
                 {loc.address && <div className="flex items-start gap-2 py-3 border-t border-slate-800/50 mt-3 text-sm text-slate-400"><MapPin className="w-4 h-4 shrink-0 mt-0.5 text-custom-blue/50" /><p className="line-clamp-2">{loc.address}</p></div>}
+                <div className="flex items-center justify-between pt-3 border-t border-slate-800/50">
+                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                        <Globe className="w-3 h-3 text-teal-500/50" />
+                        <span>{loc.latitude?.toFixed(4)}, {loc.longitude?.toFixed(4)}</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-[10px] font-bold text-teal-400 bg-teal-400/5 px-1.5 py-0.5 rounded border border-teal-400/10">
+                        <ShieldCheck className="w-3 h-3" />
+                        {loc.geofenceRadius}M RADIUS
+                    </div>
+                </div>
             </div>
           </div>
         ))}

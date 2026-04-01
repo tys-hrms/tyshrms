@@ -4,6 +4,7 @@ import { startRegistration, startAuthentication } from '@simplewebauthn/browser'
 import { db } from '../lib/database';
 import { useSettings } from './SettingsContext';
 import { useRBAC } from './RBACContext';
+import { calculateDistance } from '../lib/location';
 
 const STORAGE_KEY_USERS = 'tys_hrms_users_v2';
 const STORAGE_KEY_SESSION = 'tys_hrms_session_v2';
@@ -35,7 +36,7 @@ interface AuthContextType {
   createUser: (data: Omit<User, 'id' | 'createdAt' | 'isActive'>) => boolean;
   updateUser: (id: string, updates: Partial<User>) => void;
   deleteUser: (id: string) => void;
-  login: (pin: string) => { success: boolean; error?: string };
+  login: (pin: string, faceDetected?: boolean, userCoords?: { lat: number; lng: number }) => { success: boolean; error?: string; requiresLocation?: boolean };
   logout: () => void;
   clockIn: (latLng?: string, method?: AttendanceLog['method']) => void;
   clockOut: (latLng?: string) => void;
@@ -46,6 +47,7 @@ interface AuthContextType {
   getTodayAttendance: (userId: string) => AttendanceLog | undefined;
   getAllTodayAttendance: () => AttendanceLog[];
   migrateLocalToCloud: () => Promise<{ success: boolean; count: number }>;
+  setGeofenceBypass: (userId: string, hours: number) => void;
 }
 
 const defaultSession: SessionState = {
@@ -217,9 +219,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (settings.mongodb.isEnabled) db.delete('users', id);
   };
 
-  const login = (pin: string): { success: boolean, error?: string } => {
+  const setGeofenceBypass = (userId: string, hours: number) => {
+    const until = new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
+    updateUser(userId, { geofenceBypassUntil: until });
+  };
+
+  const login = (pin: string, faceDetected?: boolean, userCoords?: { lat: number; lng: number }): { success: boolean, error?: string, requiresLocation?: boolean } => {
     const user = users.find(u => u.pinCode === pin && u.isActive);
     if (!user) return { success: false, error: 'Invalid PIN' };
+
+    // 1. Face Recognition Check (Required if faceDetected is passed as false)
+    if (faceDetected === false) {
+      return { success: false, error: 'No face detected. Please face the camera.' };
+    }
+
+    // 2. Geofencing Check (For Manager & Worker)
+    if (user.role !== 'Admin') {
+      // Check for Bypass first
+      const isBypassed = user.geofenceBypassUntil && new Date(user.geofenceBypassUntil) > new Date();
+      
+      if (!isBypassed) {
+        if (!userCoords) return { success: false, error: 'Location verification required', requiresLocation: true };
+
+        // Find assigned location or primary HQ
+        const assignedLoc = settings.locations.find(l => l.id === user.locationId) || settings.locations.find(l => l.isPrimary);
+        
+        if (assignedLoc && assignedLoc.latitude && assignedLoc.longitude) {
+          const dist = calculateDistance(userCoords.lat, userCoords.lng, assignedLoc.latitude, assignedLoc.longitude);
+          const radius = assignedLoc.geofenceRadius || 50;
+          
+          if (dist > radius) {
+            return { success: false, error: `Outside Allowed Zone (${Math.round(dist)}m from ${assignedLoc.name}). Please go within ${radius}m.` };
+          }
+        } else {
+          // If no HQ defined, we allow login but log it? For now, proceed if no HQ setup yet.
+          console.warn('[Geofence] No coordinates found for target location.');
+        }
+      }
+    }
 
     const today = new Date().toISOString().split('T')[0];
     const existingLog = attendanceLogs.find(l => l.userId === user.id && l.date === today && !l.clockOut);
@@ -380,7 +417,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       createInitialAdmin, createUser, updateUser, deleteUser,
       login, logout, clockIn, clockOut, startBreak, endBreak,
       getTodayAttendance, getAllTodayAttendance,
-      registerBiometrics, loginBiometric, migrateLocalToCloud
+      registerBiometrics, loginBiometric, migrateLocalToCloud, setGeofenceBypass
     }}>
       {children}
     </AuthContext.Provider>

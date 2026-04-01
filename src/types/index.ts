@@ -34,6 +34,7 @@ export interface User {
   assignedTasks?: TaskType[];   // for Worker
   isActive: boolean;
   biometricCredentials?: BiometricCredential[];
+  geofenceBypassUntil?: string; // ISO Date String for temporary bypass
   createdAt: string;
   leaveBalances?: {
     casual: number;
@@ -280,6 +281,9 @@ export interface Location {
   name: string;
   type: LocationType;
   address?: string;
+  latitude?: number;
+  longitude?: number;
+  geofenceRadius?: number; // in meters, default 50
   isPrimary?: boolean;
 }
 
