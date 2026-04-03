@@ -3,7 +3,7 @@
 
 import { MongoClient, ObjectId } from 'mongodb';
 
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://tys_admin:tys%25401234@cluster0.1oxlktm.mongodb.net/?appName=Cluster0";
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://vnkt045_db_user:byU6RBdx6BMHrW6f@cluster0.obki2is.mongodb.net/?appName=Cluster0";
 const DB_NAME = process.env.MONGODB_DB || "hrmscore";
 
 const ALLOWED_COLLECTIONS = new Set([
