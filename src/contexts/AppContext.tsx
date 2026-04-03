@@ -181,12 +181,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const addProducts = async (pArray: Omit<Product, 'id' | 'createdAt'>[]) => {
-    if (!session?.tenant?.id) return;
+    const tid = session?.tenant?.id;
+    if (!tid) return;
     const now = new Date().toISOString();
     const newProducts = pArray.map(p => ({ 
       ...p, 
       id: generateId(), 
-      tenantId: session.tenant.id!,
+      tenantId: tid,
       createdAt: now, 
       mongoSynced: false, 
       inventory: p.inventory || 0 

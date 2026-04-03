@@ -35,7 +35,7 @@ export default function UserRegistrationForm({ onSuccess, onCancel }: UserRegist
     );
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -46,7 +46,7 @@ export default function UserRegistrationForm({ onSuccess, onCancel }: UserRegist
       return setError('Worker must have at least one assigned task');
     }
 
-    const success = createUser({
+    const success = await createUser({
       name: name.trim(),
       pinCode: pin,
       role,
