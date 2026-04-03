@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { UserRole, AppModule, PermissionAction, RolePermission, PermissionScope } from '../types';
 import { db } from '../lib/database';
 import { useSettings } from './SettingsContext';
+import { useAuth } from './AuthContext';
 
 
 // Default permissions matrix using scopes
@@ -68,23 +69,27 @@ const RBACContext = createContext<RBACContextType | undefined>(undefined);
 
 export function RBACProvider({ children }: { children: ReactNode }) {
   const { settings } = useSettings();
+  const { session } = useAuth();
   const [permissions, setPermissions] = useState<RolePermission[]>(DEFAULT_PERMISSIONS);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (!settings.mongodb.isEnabled) {
-      setIsLoading(false);
+    if (!settings.mongodb.isEnabled || !session?.tenant?.id) {
+      if (!session?.tenant?.id) setIsLoading(false);
       return;
     }
 
     const loadCloudRBAC = async () => {
       try {
-        const cPermissions = await db.getAll<RolePermission>('rbac_permissions');
+        const cPermissions = await db.request('find', 'rbac_permissions', { 
+          filter: { tenantId: session.tenant!.id } 
+        }).then(res => res.documents || []);
+        
         if (cPermissions.length) {
           setPermissions(prev => {
             const merged = [...prev];
-            cPermissions.forEach(cp => {
+            cPermissions.forEach((cp: any) => {
               const idx = merged.findIndex(p => p.role === cp.role && p.module === cp.module);
               if (idx !== -1) merged[idx] = cp;
               else merged.push(cp);
@@ -99,7 +104,7 @@ export function RBACProvider({ children }: { children: ReactNode }) {
       }
     };
     loadCloudRBAC();
-  }, [settings.mongodb.isEnabled]);
+  }, [settings.mongodb.isEnabled, session?.tenant?.id]);
 
   const can = (role: UserRole, module: AppModule, action: PermissionAction, targetLocationId?: string, userLocationId?: string): boolean => {
     // Admin always has module bypass
@@ -147,9 +152,9 @@ export function RBACProvider({ children }: { children: ReactNode }) {
           deleteScope: action === 'delete' ? value : p.deleteScope,
         };
       });
-      if (settings.mongodb.isEnabled) {
+      if (settings.mongodb.isEnabled && session?.tenant?.id) {
         const updated = next.find(p => p.role === role && p.module === module);
-        if (updated) db.save('rbac_permissions', { ...updated, id: `${role}_${module}` });
+        if (updated) db.save('rbac_permissions', { ...updated, id: `${session.tenant.id}_${role}_${module}`, tenantId: session.tenant.id });
       }
       return next;
     });

@@ -101,10 +101,10 @@ import ThemeProvider from './components/ThemeProvider';
 
 export default function App() {
   return (
-    <SettingsProvider>
-      <ThemeProvider>
-        <RBACProvider>
-          <AuthProvider>
+    <AuthProvider>
+      <SettingsProvider>
+        <ThemeProvider>
+          <RBACProvider>
             <CRMProvider>
               <PayrollProvider>
                 <AppProvider>
@@ -116,9 +116,9 @@ export default function App() {
                 </AppProvider>
               </PayrollProvider>
             </CRMProvider>
-          </AuthProvider>
-        </RBACProvider>
-      </ThemeProvider>
-    </SettingsProvider>
+          </RBACProvider>
+        </ThemeProvider>
+      </SettingsProvider>
+    </AuthProvider>
   );
 }

@@ -90,20 +90,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const loadCloudData = async () => {
-    if (!settings.mongodb.isEnabled) return;
+    if (!settings.mongodb.isEnabled || !session?.tenant?.id) {
+      if (!session?.tenant?.id) setIsLoading(false);
+      return;
+    }
     try {
+      const tid = session.tenant.id;
       const [cProducts, cAssignments, cLogs, cLeaves, cTasks, cDefects, cCarry, n, cNodes, cEdges, cDispatches] = await Promise.all([
-        db.getAll<Product>('products'),
-        db.getAll<Assignment>('assignments'),
-        db.getAll<WorkLog>('worklogs'),
-        db.getAll<LeaveLog>('leaves'),
-        db.getAll<TaskDefinition>('tasks'),
-        db.getAll<DefectReason>('defect_reasons'),
-        db.getAll<AssignmentCarryForward>('carry_forwards'),
-        db.getAll<Notification>('notifications'),
-        db.getAll<any>('workflow_nodes'),
-        db.getAll<any>('workflow_edges'),
-        db.getAll<DispatchBatch>('dispatches'),
+        db.request('find', 'products', { filter: { tenantId: tid } }).then(r => r.documents || []),
+        db.request('find', 'assignments', { filter: { tenantId: tid } }).then(r => r.documents || []),
+        db.request('find', 'worklogs', { filter: { tenantId: tid } }).then(r => r.documents || []),
+        db.request('find', 'leaves', { filter: { tenantId: tid } }).then(r => r.documents || []),
+        db.request('find', 'tasks', { filter: { tenantId: tid } }).then(r => r.documents || []),
+        db.request('find', 'defect_reasons', { filter: { tenantId: tid } }).then(r => r.documents || []),
+        db.request('find', 'carry_forwards', { filter: { tenantId: tid } }).then(r => r.documents || []),
+        db.request('find', 'notifications', { filter: { tenantId: tid } }).then(r => r.documents || []),
+        db.request('find', 'workflow_nodes', { filter: { tenantId: tid } }).then(r => r.documents || []),
+        db.request('find', 'workflow_edges', { filter: { tenantId: tid } }).then(r => r.documents || []),
+        db.request('find', 'dispatches', { filter: { tenantId: tid } }).then(r => r.documents || []),
       ]);
       if (cProducts.length) setProducts(cProducts.map(p => ({ ...p, mongoSynced: true })));
       if (cAssignments.length) setAssignments(cAssignments);
@@ -116,6 +120,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (cNodes.length) setWorkflowNodesState(cNodes);
       if (cEdges.length) setWorkflowEdgesState(cEdges);
       if (cDispatches.length) setDispatches(cDispatches);
+      setLastSyncedAt(Date.now());
       setLastSyncedAt(Date.now());
     } catch (e) {
       console.warn('[CloudSync] Silent load failed:', e);

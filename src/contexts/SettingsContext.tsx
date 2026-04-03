@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { AppSettings, ShopifySettings, MongoSettings, Shift, LeaveAutomationSettings, BrandingSettings } from '../types';
 import { db } from '../lib/database';
+import { useAuth } from './AuthContext';
 
 function generateId(): string {
   return crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -79,18 +80,25 @@ interface SettingsContextType {
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
+  const { session } = useAuth();
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [shifts, setShifts] = useState<Shift[]>(DEFAULT_SHIFTS);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<number>(Date.now());
 
+  useEffect(() => {
+    if (session?.tenant?.id) {
+       setSettings(prev => ({ ...prev, tenantId: session.tenant!.id }));
+    }
+  }, [session?.tenant?.id]);
+
   const loadCloudSettings = async () => {
     if (!settings.tenantId) return;
     try {
       const [cSettings, cShifts] = await Promise.all([
         db.tenants.getSettings(settings.tenantId),
-        db.getAll<Shift>('shifts')
+        db.request('find', 'shifts', { filter: { tenantId: settings.tenantId } }).then(r => r.documents || []),
       ]);
 
       if (cSettings) {
