@@ -97,19 +97,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const tid = session.tenant.id;
       const [cProducts, cAssignments, cLogs, cLeaves, cTasks, cDefects, cCarry, n, cNodes, cEdges, cDispatches] = await Promise.all([
-        db.request('find', 'products', { filter: { tenantId: tid } }).then(r => r.documents || []),
-        db.request('find', 'assignments', { filter: { tenantId: tid } }).then(r => r.documents || []),
-        db.request('find', 'worklogs', { filter: { tenantId: tid } }).then(r => r.documents || []),
-        db.request('find', 'leaves', { filter: { tenantId: tid } }).then(r => r.documents || []),
-        db.request('find', 'tasks', { filter: { tenantId: tid } }).then(r => r.documents || []),
-        db.request('find', 'defect_reasons', { filter: { tenantId: tid } }).then(r => r.documents || []),
-        db.request('find', 'carry_forwards', { filter: { tenantId: tid } }).then(r => r.documents || []),
-        db.request('find', 'notifications', { filter: { tenantId: tid } }).then(r => r.documents || []),
-        db.request('find', 'workflow_nodes', { filter: { tenantId: tid } }).then(r => r.documents || []),
-        db.request('find', 'workflow_edges', { filter: { tenantId: tid } }).then(r => r.documents || []),
-        db.request('find', 'dispatches', { filter: { tenantId: tid } }).then(r => r.documents || []),
+        db.request('find', 'products', { filter: { tid } }).then(r => (r.documents || []) as Product[]),
+        db.request('find', 'assignments', { filter: { tid } }).then(r => (r.documents || []) as Assignment[]),
+        db.request('find', 'worklogs', { filter: { tid } }).then(r => (r.documents || []) as WorkLog[]),
+        db.request('find', 'leaves', { filter: { tid } }).then(r => (r.documents || []) as LeaveLog[]),
+        db.request('find', 'tasks', { filter: { tid } }).then(r => (r.documents || []) as TaskDefinition[]),
+        db.request('find', 'defect_reasons', { filter: { tid } }).then(r => (r.documents || []) as DefectReason[]),
+        db.request('find', 'carry_forwards', { filter: { tid } }).then(r => (r.documents || []) as AssignmentCarryForward[]),
+        db.request('find', 'notifications', { filter: { tid } }).then(r => (r.documents || []) as Notification[]),
+        db.request('find', 'workflow_nodes', { filter: { tid } }).then(r => (r.documents || []) as any[]),
+        db.request('find', 'workflow_edges', { filter: { tid } }).then(r => (r.documents || []) as any[]),
+        db.request('find', 'dispatches', { filter: { tid } }).then(r => (r.documents || []) as DispatchBatch[]),
       ]);
-      if (cProducts.length) setProducts(cProducts.map(p => ({ ...p, mongoSynced: true })));
+      if (cProducts.length) setProducts(cProducts.map((p: Product) => ({ ...p, mongoSynced: true })));
       if (cAssignments.length) setAssignments(cAssignments);
       if (cLogs.length) setWorkLogs(cLogs);
       if (cLeaves.length) setLeaves(cLeaves);
