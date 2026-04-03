@@ -13,6 +13,7 @@ export default function UsersPage() {
   const [isAdding, setIsAdding] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [editingUser, setEditingUser] = useState<any>(null);
+  const [activeEditTab, setActiveEditTab] = useState<'profile' | 'compensation'>('profile');
 
   const currentUserRole = session.currentUser?.role || 'Worker';
   const canCreate = can(currentUserRole, 'users', 'create');
@@ -71,9 +72,23 @@ export default function UsersPage() {
       {/* Edit User Modal */}
       {editingUser && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 animate-in fade-in zoom-in duration-200 overflow-y-auto max-h-[90vh]">
-            <h3 className="text-xl font-bold text-white mb-4">Edit User</h3>
-            <div className="space-y-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-xl p-6 animate-in fade-in zoom-in duration-200 overflow-y-auto max-h-[90vh]">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-white">Edit User</h3>
+              <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
+                <button
+                   onClick={() => setActiveEditTab('profile')}
+                   className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeEditTab === 'profile' ? 'bg-slate-800 text-white shadow' : 'text-slate-500 hover:text-slate-300'}`}
+                >Profile Details</button>
+                <button
+                   onClick={() => setActiveEditTab('compensation')}
+                   className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeEditTab === 'compensation' ? 'bg-slate-800 text-white shadow' : 'text-slate-500 hover:text-slate-300'}`}
+                >Compensation</button>
+              </div>
+            </div>
+
+            {activeEditTab === 'profile' && (
+              <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-400 mb-1">Name</label>
                 <input 
@@ -188,7 +203,53 @@ export default function UsersPage() {
               </div>
 
             </div>
-            <div className="flex justify-end gap-3 mt-8">
+            )}
+
+            {activeEditTab === 'compensation' && (
+              <div className="space-y-6 animate-in fade-in">
+                 <div className="grid grid-cols-2 gap-4">
+                   <div>
+                     <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 ml-1">Basic Salary (Monthly)</label>
+                     <input type="number" 
+                            value={editingUser.salaryStructure?.basic || ''} 
+                            onChange={e => setEditingUser({...editingUser, salaryStructure: {...(editingUser.salaryStructure || {}), basic: Number(e.target.value)}})}
+                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:border-emerald-500 outline-none" />
+                   </div>
+                   <div>
+                     <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 ml-1">HRA</label>
+                     <input type="number" 
+                            value={editingUser.salaryStructure?.hra || ''} 
+                            onChange={e => setEditingUser({...editingUser, salaryStructure: {...(editingUser.salaryStructure || {}), hra: Number(e.target.value)}})}
+                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:border-emerald-500 outline-none" />
+                   </div>
+                   <div className="col-span-2">
+                     <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 ml-1">Other Allowances</label>
+                     <input type="number" 
+                            value={editingUser.salaryStructure?.otherAllowances || ''} 
+                            onChange={e => setEditingUser({...editingUser, salaryStructure: {...(editingUser.salaryStructure || {}), otherAllowances: Number(e.target.value)}})}
+                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:border-emerald-500 outline-none" />
+                   </div>
+                 </div>
+
+                 <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-4">
+                   <h4 className="text-[10px] font-black text-white uppercase tracking-widest border-b border-slate-800 pb-2">Statutory Components</h4>
+                   <div className="flex items-center justify-between">
+                     <span className="text-sm font-medium text-slate-300">EPF Member</span>
+                     <input type="checkbox" checked={editingUser.salaryStructure?.isEpfMember || false} onChange={e => setEditingUser({...editingUser, salaryStructure: {...(editingUser.salaryStructure || {}), isEpfMember: e.target.checked}})} className="rounded bg-slate-700 border-slate-600 text-custom-blue w-4 h-4" />
+                   </div>
+                   <div className="flex items-center justify-between">
+                     <span className="text-sm font-medium text-slate-300">ESI Member</span>
+                     <input type="checkbox" checked={editingUser.salaryStructure?.isEsiMember || false} onChange={e => setEditingUser({...editingUser, salaryStructure: {...(editingUser.salaryStructure || {}), isEsiMember: e.target.checked}})} className="rounded bg-slate-700 border-slate-600 text-custom-blue w-4 h-4" />
+                   </div>
+                   <div className="flex items-center justify-between">
+                     <span className="text-sm font-medium text-slate-300">Professional Tax (PT)</span>
+                     <input type="checkbox" checked={editingUser.salaryStructure?.isPtMember || false} onChange={e => setEditingUser({...editingUser, salaryStructure: {...(editingUser.salaryStructure || {}), isPtMember: e.target.checked}})} className="rounded bg-slate-700 border-slate-600 text-custom-blue w-4 h-4" />
+                   </div>
+                 </div>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-slate-800">
               <button 
                 onClick={() => setEditingUser(null)}
                 className="px-5 py-2 text-slate-400 hover:text-white transition-colors"
@@ -303,6 +364,7 @@ export default function UsersPage() {
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end space-x-2">
 
+                          {/* Action Buttons */}
                           {currentUserRole === 'Admin' && (
                             <button 
                               onClick={() => {
@@ -324,7 +386,10 @@ export default function UsersPage() {
                           )}
                           {canEdit && (
                             <button 
-                              onClick={() => setEditingUser(user)}
+                              onClick={() => {
+                                setEditingUser(user);
+                                setActiveEditTab('profile');
+                              }}
                               className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700 transition-colors"
                               title="Edit User"
                             >

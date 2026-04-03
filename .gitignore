@@ -9,3 +9,7 @@ dist/
 
 # Local Netlify folder
 .netlify
+dev-server.mjs
+repair_tenant_data.mjs
+hard_reset_mongo.mjs
+*.mjs

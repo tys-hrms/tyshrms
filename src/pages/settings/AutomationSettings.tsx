@@ -1,14 +1,23 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useSettings } from '../../contexts/SettingsContext';
-import { MessageSquare, Mail, Bell, ShieldCheck, Save, Phone, Info } from 'lucide-react';
+import { MessageSquare, Mail, Bell, ShieldCheck, Save, Phone, Info, CheckCircle2 } from 'lucide-react';
 
 export default function AutomationSettings() {
   const { settings, updateLeaveAutomation } = useSettings();
-  const { enabled, whatsappEnabled, emailEnabled, whatsappTemplate, emailTemplate } = settings.leaveAutomation;
+  const [formData, setFormData] = useState(settings.leaveAutomation);
+  const [isSaved, setIsSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert('Automation Settings saved!');
+    setIsSaving(true);
+    try {
+      await updateLeaveAutomation(formData);
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 3000);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -30,7 +39,7 @@ export default function AutomationSettings() {
           {/* Master Toggle */}
           <div className="p-6 bg-slate-950 rounded-2xl border border-slate-800 flex items-center justify-between shadow-inner">
             <div className="flex items-center gap-4">
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${enabled ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-800 text-slate-500'}`}>
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${formData.enabled ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-800 text-slate-500'}`}>
                 <ShieldCheck className="w-6 h-6" />
               </div>
               <div>
@@ -40,14 +49,14 @@ export default function AutomationSettings() {
             </div>
             <button
               type="button"
-              onClick={() => updateLeaveAutomation({ enabled: !enabled })}
-              className={`w-14 h-7 rounded-full transition-all relative ${enabled ? 'bg-emerald-500 shadow-lg shadow-emerald-500/20' : 'bg-slate-800'}`}
+              onClick={() => setFormData({ ...formData, enabled: !formData.enabled })}
+              className={`w-14 h-7 rounded-full transition-all relative ${formData.enabled ? 'bg-emerald-500 shadow-lg shadow-emerald-500/20' : 'bg-slate-800'}`}
             >
-              <div className={`absolute top-1.5 w-4 h-4 bg-white rounded-full transition-all ${enabled ? 'left-8' : 'left-1.5'}`} />
+              <div className={`absolute top-1.5 w-4 h-4 bg-white rounded-full transition-all ${formData.enabled ? 'left-8' : 'left-1.5'}`} />
             </button>
           </div>
 
-          <div className={`grid grid-cols-1 md:grid-cols-2 gap-8 transition-opacity duration-300 ${enabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
+          <div className={`grid grid-cols-1 md:grid-cols-2 gap-8 transition-opacity duration-300 ${formData.enabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
             
             {/* WhatsApp Integration */}
             <div className="space-y-6">
@@ -58,18 +67,18 @@ export default function AutomationSettings() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => updateLeaveAutomation({ whatsappEnabled: !whatsappEnabled })}
-                  className={`w-10 h-5 rounded-full transition-all relative ${whatsappEnabled ? 'bg-emerald-500' : 'bg-slate-800'}`}
+                  onClick={() => setFormData({ ...formData, whatsappEnabled: !formData.whatsappEnabled })}
+                  className={`w-10 h-5 rounded-full transition-all relative ${formData.whatsappEnabled ? 'bg-emerald-500' : 'bg-slate-800'}`}
                 >
-                  <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${whatsappEnabled ? 'left-6' : 'left-1'}`} />
+                  <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${formData.whatsappEnabled ? 'left-6' : 'left-1'}`} />
                 </button>
               </div>
 
               <div className="space-y-3">
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Message Template</label>
                 <textarea
-                  value={whatsappTemplate}
-                  onChange={e => updateLeaveAutomation({ whatsappTemplate: e.target.value })}
+                  value={formData.whatsappTemplate}
+                  onChange={e => setFormData({ ...formData, whatsappTemplate: e.target.value })}
                   rows={6}
                   className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-sm text-slate-300 focus:border-custom-blue outline-none resize-none transition-all placeholder:text-slate-700"
                   placeholder="Draft your message..."
@@ -92,18 +101,18 @@ export default function AutomationSettings() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => updateLeaveAutomation({ emailEnabled: !emailEnabled })}
-                  className={`w-10 h-5 rounded-full transition-all relative ${emailEnabled ? 'bg-custom-blue' : 'bg-slate-800'}`}
+                  onClick={() => setFormData({ ...formData, emailEnabled: !formData.emailEnabled })}
+                  className={`w-10 h-5 rounded-full transition-all relative ${formData.emailEnabled ? 'bg-custom-blue' : 'bg-slate-800'}`}
                 >
-                  <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${emailEnabled ? 'left-6' : 'left-1'}`} />
+                  <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${formData.emailEnabled ? 'left-6' : 'left-1'}`} />
                 </button>
               </div>
 
               <div className="space-y-3">
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Email Body Template</label>
                 <textarea
-                  value={emailTemplate}
-                  onChange={e => updateLeaveAutomation({ emailTemplate: e.target.value })}
+                  value={formData.emailTemplate}
+                  onChange={e => setFormData({ ...formData, emailTemplate: e.target.value })}
                   rows={6}
                   className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-sm text-slate-300 focus:border-custom-blue outline-none resize-none transition-all placeholder:text-slate-700"
                   placeholder="Draft your email..."
@@ -118,13 +127,19 @@ export default function AutomationSettings() {
             </div>
           </div>
 
-          <div className="pt-6 border-t border-slate-800 flex justify-end">
+          <div className="pt-6 border-t border-slate-800 flex justify-end gap-4 items-center">
+            {isSaved && (
+              <span className="text-emerald-400 text-sm font-bold flex items-center gap-2 animate-in fade-in zoom-in">
+                <CheckCircle2 className="w-5 h-5" /> Saved
+              </span>
+            )}
             <button
               type="submit"
-              className="px-8 py-3 bg-custom-blue hover:bg-blue-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-xl shadow-custom-blue/20"
+              disabled={isSaving}
+              className="px-8 py-3 bg-custom-blue hover:bg-blue-600 disabled:opacity-50 text-white rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-xl shadow-custom-blue/20"
             >
               <Save className="w-4 h-4 mr-2 inline" />
-              Save Workflow Settings
+              {isSaving ? 'Syncing...' : 'Save Workflow Settings'}
             </button>
           </div>
         </form>

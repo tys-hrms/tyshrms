@@ -4,6 +4,8 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AppProvider } from './contexts/AppContext';
 import { SettingsProvider, useSettings } from './contexts/SettingsContext';
 import { RBACProvider, useRBAC } from './contexts/RBACContext';
+import { CRMProvider } from './contexts/CRMContext';
+import { PayrollProvider } from './contexts/PayrollContext';
 
 import LoginPage from './pages/LoginPage';
 import RegistrationPage from './pages/RegistrationPage';
@@ -20,6 +22,9 @@ import AttendanceIndex from './pages/AttendanceIndex';
 import ProductsPage from './pages/ProductsPage';
 import LeaveManagement from './pages/attendance/LeaveManagement';
 import ReportsPage from './pages/ReportsPage';
+import ProfilePage from './pages/ProfilePage';
+import CRMPage from './pages/CRMPage';
+import PayrollPage from './pages/PayrollPage';
 
 // Temporary loading splash
 const LoadingSplash = ({ message = 'Initializing HRMSCore...' }: { message?: string }) => (
@@ -39,34 +44,56 @@ function AppRoutes() {
   // Listen for the custom nav event from AppShell (Sidebar)
   useEffect(() => {
     const handleNav = (e: CustomEvent<string>) => {
-      navigate(e.detail);
+      if (session.tenant?.companySlug) {
+        navigate(`/${session.tenant.companySlug}/app${e.detail}`);
+      } else {
+        navigate(e.detail);
+      }
     };
     window.addEventListener('nav-request' as any, handleNav);
     return () => window.removeEventListener('nav-request' as any, handleNav);
-  }, [navigate]);
+  }, [navigate, session.tenant]);
 
   if (authLoading) return <LoadingSplash message="Verifying Identity..." />;
   if (settingsLoading || rbacLoading) return <LoadingSplash message="Syncing System Settings..." />;
 
   // Auth & Discovery Logic
   if (location.pathname === '/register') return <RegistrationPage />;
+  
+  // If no tenant is selected, show login (discovery)
+  if (!session.tenant) return <LoginPage />;
+  
+  // If tenant is selected but no user is logged in, show login (identity)
   if (!session.currentUser) return <LoginPage />;
 
+  // Redirect root / to slug-based dashboard
+  if (location.pathname === '/') {
+    return <Navigate to={`/${session.tenant.companySlug}/app/`} replace />;
+  }
+
   return (
-    <AppShell>
-      <Routes>
-        <Route path="/" element={<AdminDashboard />} />
-        <Route path="/assignments" element={<AssignmentsPage />} />
-        <Route path="/users" element={<UsersPage />} />
-        <Route path="/products" element={<ProductsPage />} />
-        <Route path="/attendance" element={<AttendanceIndex />} />
-        <Route path="/leaves" element={<LeaveManagement />} />
-        <Route path="/reports" element={<ReportsPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/rbac" element={<RBACPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </AppShell>
+    <Routes>
+      <Route path="/:companySlug/app/*" element={
+        <AppShell>
+          <Routes>
+            <Route path="/" element={<AdminDashboard />} />
+            <Route path="/assignments" element={<AssignmentsPage />} />
+            <Route path="/users" element={<UsersPage />} />
+            <Route path="/products" element={<ProductsPage />} />
+            <Route path="/attendance" element={<AttendanceIndex />} />
+            <Route path="/leaves" element={<LeaveManagement />} />
+            <Route path="/reports" element={<ReportsPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/rbac" element={<RBACPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/crm" element={<CRMPage />} />
+            <Route path="/payroll" element={<PayrollPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </AppShell>
+      } />
+      <Route path="*" element={<Navigate to={`/${session.tenant.companySlug}/app/`} replace />} />
+    </Routes>
   );
 }
 
@@ -78,13 +105,17 @@ export default function App() {
       <ThemeProvider>
         <RBACProvider>
           <AuthProvider>
-            <AppProvider>
-              <BrowserRouter>
-                <Routes>
-                  <Route path="/*" element={<AppRoutes />} />
-                </Routes>
-              </BrowserRouter>
-            </AppProvider>
+            <CRMProvider>
+              <PayrollProvider>
+                <AppProvider>
+                  <BrowserRouter>
+                    <Routes>
+                      <Route path="/*" element={<AppRoutes />} />
+                    </Routes>
+                  </BrowserRouter>
+                </AppProvider>
+              </PayrollProvider>
+            </CRMProvider>
           </AuthProvider>
         </RBACProvider>
       </ThemeProvider>

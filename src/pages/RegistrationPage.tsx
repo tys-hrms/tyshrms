@@ -15,7 +15,9 @@ import {
   Calendar,
   Briefcase,
   Users,
-  Database
+  Database,
+  RefreshCw,
+  MapPin
 } from 'lucide-react';
 
 export default function RegistrationPage() {
@@ -31,6 +33,8 @@ export default function RegistrationPage() {
     gst: '',
     companyType: '',
     employeeCount: '',
+    state: 'Maharashtra',
+    businessType: '',
     email: '',
     pin: '',
     phone: '',
@@ -105,7 +109,15 @@ export default function RegistrationPage() {
         employeeCount: formData.employeeCount,
         email: formData.email,
         phone: `${formData.countryCode}${formData.phone}`,
-        pin: formData.pin
+        pin: formData.pin,
+        state: formData.state,
+        payrollSettings: {
+           epfEnabled: true,
+           esiEnabled: true,
+           ptEnabled: true,
+           gratuityEnabled: true,
+           holidayList: [] // Will be populated by settings defaults after login
+        }
       });
 
       if (result.success && result.tenantId) {
@@ -141,7 +153,10 @@ export default function RegistrationPage() {
           </div>
 
           <button 
-            onClick={() => navigate('/')}
+            onClick={() => {
+              // Ensure we return to clean discovery state
+              window.location.href = '/'; 
+            }}
             className="w-full py-4 bg-brand-500 hover:bg-brand-600 text-white font-bold transition-colors uppercase tracking-widest"
           >
             Continue to Login
@@ -234,23 +249,41 @@ export default function RegistrationPage() {
                 />
               </div>
 
-              {/* Company Type */}
+              {/* Registered State (New V9) */}
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                  <Briefcase className="w-3 h-3" /> Company Type *
+                  <MapPin className="w-3 h-3 text-brand-500" /> Base of Operations (State) *
+                </label>
+                <select 
+                  name="state"
+                  required
+                  value={formData.state}
+                  onChange={handleInputChange}
+                  className="w-full bg-slate-950 border border-slate-800 p-3 text-white focus:border-brand-500 outline-none transition-colors appearance-none"
+                >
+                  {["Maharashtra", "Karnataka", "Tamil Nadu", "Gujarat", "Delhi", "West Bengal", "Uttar Pradesh", "Telangana", "Andhra Pradesh", "Kerala", "Punjab", "Haryana", "Rajasthan", "Bihar", "Odisha", "Madhya Pradesh"].map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+
+              {/* Type of Business / Segment */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                  <Briefcase className="w-3 h-3 text-brand-500" /> Type of Business *
                 </label>
                 <select
                   name="companyType"
+                  required
                   value={formData.companyType}
                   onChange={handleInputChange}
                   className="w-full bg-slate-950 border border-slate-800 p-3 text-white focus:border-brand-500 outline-none transition-colors appearance-none"
                 >
-                  <option value="">Select Type</option>
-                  <option value="Manufacturing">Manufacturing</option>
-                  <option value="Retail">Retail</option>
-                  <option value="Service">Service</option>
-                  <option value="Warehouse">Warehouse</option>
-                  <option value="Other">Other</option>
+                  <option value="">Select Segment</option>
+                  <option value="Garment Manufacturing">Garment Manufacturing</option>
+                  <option value="Textile / Fabric Processing">Textile / Fabric Processing</option>
+                  <option value="Apparel Export House">Apparel Export House</option>
+                  <option value="Retail Brand / Franchise">Retail Brand / Franchise</option>
+                  <option value="Boutique / Design Studio">Boutique / Design Studio</option>
+                  <option value="Others">Others</option>
                 </select>
               </div>
 
@@ -340,7 +373,7 @@ export default function RegistrationPage() {
                       const val = e.target.value.replace(/\D/g, '').slice(0, 10);
                       setFormData(prev => ({ ...prev, phone: val }));
                     }}
-                    className="flex-1 bg-slate-950 border border-slate-800 p-3 text-white focus:border-brand-500 outline-none transition-colors"
+                    className="flex-1 min-w-0 bg-slate-950 border border-slate-800 p-3 text-white focus:border-brand-500 outline-none transition-colors"
                     placeholder="10 Digits"
                     inputMode="numeric"
                   />
@@ -357,16 +390,17 @@ export default function RegistrationPage() {
                     type="text"
                     value={userCaptcha}
                     onChange={e => setUserCaptcha(e.target.value.replace(/\D/g, ''))}
-                    className="flex-1 bg-slate-950 border border-slate-800 p-3 text-white focus:border-brand-500 outline-none transition-colors"
+                    className="flex-1 min-w-0 bg-slate-950 border border-slate-800 p-3 text-white focus:border-brand-500 outline-none transition-colors"
                     placeholder="Answer"
                     inputMode="numeric"
                   />
                   <button
                     type="button"
                     onClick={generateCaptcha}
-                    className="px-4 bg-slate-800 hover:bg-slate-700 text-slate-400 transition-colors"
+                    className="px-4 bg-slate-800 hover:bg-slate-700 text-slate-400 transition-colors flex items-center justify-center flex-shrink-0"
+                    title="Refresh"
                   >
-                    Refresh
+                    <RefreshCw className="w-4 h-4" />
                   </button>
                 </div>
               </div>

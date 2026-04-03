@@ -95,8 +95,8 @@ export default function LocationSettings() {
     <div className="space-y-6 animate-in fade-in duration-300">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-bold text-white tracking-tight">Organization Locations</h2>
-          <p className="text-sm text-slate-400 mt-1">Define your Headquarters and regional warehouses with Geofencing.</p>
+          <h2 className="text-xl font-bold text-white tracking-tight">Operation Centers</h2>
+          <p className="text-sm text-slate-400 mt-1">Define your branches, stores, and operational sites with Geofencing.</p>
         </div>
         {!isAdding && (
           <button
@@ -136,9 +136,11 @@ export default function LocationSettings() {
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">Location Type</label>
               <select required value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value as LocationType })} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:border-custom-blue outline-none appearance-none">
-                <option value="head_office">Head Office</option>
-                <option value="branch">Branch</option>
-                <option value="warehouse">Warehouse</option>
+                <option value="branch">Branch / Site</option>
+                <option value="store">Store / Outlet</option>
+                <option value="warehouse">Warehouse / Yard</option>
+                <option value="head_office">Corporate / HQ</option>
+                <option value="other">Other</option>
               </select>
             </div>
             <div className="md:col-span-2">
@@ -165,7 +167,7 @@ export default function LocationSettings() {
             <div className="md:col-span-2">
               <label className="flex items-center gap-2 cursor-pointer bg-slate-800/50 p-3 rounded-xl border border-slate-700 w-fit">
                 <input type="checkbox" checked={formData.isPrimary} onChange={(e) => setFormData({ ...formData, isPrimary: e.target.checked })} className="rounded bg-slate-700 text-custom-blue w-4 h-4" />
-                <span className="text-sm font-medium text-slate-300">Mark as Headquarters</span>
+                <span className="text-sm font-medium text-slate-300">Set as Primary Location</span>
               </label>
             </div>
           </div>
@@ -221,7 +223,7 @@ export default function LocationSettings() {
             <div className="col-span-full py-20 text-center bg-slate-900/40 border-2 border-dashed border-slate-800 rounded-3xl">
                 <Building2 className="w-16 h-16 text-slate-700 mx-auto mb-5" />
                 <h3 className="text-xl font-bold text-white mb-2">No Locations Defined</h3>
-                <p className="text-slate-500 text-sm max-w-sm mx-auto">Add your headquarters and warehouses to complete your organization setup.</p>
+                <p className="text-slate-500 text-sm max-w-sm mx-auto">Add your operational sites to enable attendance tracking.</p>
                 <button onClick={() => setIsAdding(true)} className="mt-8 px-6 py-3 bg-custom-blue/10 hover:bg-custom-blue text-custom-blue hover:text-white border border-custom-blue/20 rounded-xl font-bold transition-all">Start Setup Now</button>
             </div>
         )}

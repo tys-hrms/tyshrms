@@ -378,7 +378,7 @@ export default function WorkflowBuilder() {
   const handleDeploy = () => {
     setSaveStatus('saving');
 
-    // Persist layout to AppContext (→ localStorage + MongoDB)
+    // Persist layout to AppContext (→ MongoDB cloud)
     // Strip non-serialisable icon functions before saving
     const serializableNodes = nodes.map(n => ({
       ...n,

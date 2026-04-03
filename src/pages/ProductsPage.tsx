@@ -36,6 +36,9 @@ export default function ProductsPage() {
 
   const [sortConfig, setSortConfig] = useState<{ key: 'sku' | 'title'; direction: 'asc' | 'desc' } | null>({ key: 'title', direction: 'asc' });
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // --- Camera state ---
@@ -248,6 +251,10 @@ export default function ProductsPage() {
     });
   };
 
+  const totalPages = Math.ceil(sortedProducts.length / itemsPerPage) || 1;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedProducts = sortedProducts.slice(startIndex, startIndex + itemsPerPage);
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -423,88 +430,93 @@ export default function ProductsPage() {
         </form>
       )}
 
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
-        <div className="p-4 border-b border-slate-800 bg-slate-900/50 flex flex-col sm:flex-row gap-4 justify-between items-center">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+        <div className="p-4 border-b border-slate-800 bg-slate-900/80 flex flex-col sm:flex-row gap-4 justify-between items-center">
           <div className="relative w-full sm:w-80">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
             <input 
               type="text" 
               placeholder="Search by SKU or Name..." 
               value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-9 pr-4 py-2 text-sm text-white focus:border-custom-blue outline-none"
+              onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white focus:border-custom-blue outline-none transition-all placeholder:text-slate-600 focus:bg-slate-900"
             />
           </div>
-          <div className="text-xs text-slate-500 font-medium">
-            Showing {sortedProducts.length} products
+          <div className="text-xs text-slate-500 font-bold uppercase tracking-widest bg-slate-950 px-4 py-2 rounded-lg border border-slate-800">
+            {sortedProducts.length} Total Items
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto min-h-[400px]">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-800 bg-slate-800/20">
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider w-20">Image</th>
+              <tr className="border-b border-slate-800 bg-slate-950/50">
+                <th className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] w-20">Image</th>
                 <th 
-                  className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:text-white transition-colors"
+                  className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] cursor-pointer hover:text-white transition-colors group"
                   onClick={() => toggleSort('sku')}
                 >
                   <div className="flex items-center gap-2">
                     SKU
-                    {sortConfig?.key === 'sku' && (sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                    {sortConfig?.key === 'sku' && (sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3 text-custom-blue" /> : <ChevronDown className="w-3 h-3 text-custom-blue" />)}
                   </div>
                 </th>
                 <th 
-                  className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:text-white transition-colors"
+                  className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] cursor-pointer hover:text-white transition-colors group"
                   onClick={() => toggleSort('title')}
                 >
                   <div className="flex items-center gap-2">
-                    Product Name
-                    {sortConfig?.key === 'title' && (sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                    Product Title
+                    {sortConfig?.key === 'title' && (sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3 text-custom-blue" /> : <ChevronDown className="w-3 h-3 text-custom-blue" />)}
                   </div>
                 </th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Pieces</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Unit</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Source</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Actions</th>
+                <th className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Quantity</th>
+                <th className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Unit</th>
+                <th className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Origin</th>
+                <th className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800">
-              {sortedProducts.map(product => (
-                <tr key={product.id} className="hover:bg-slate-800/30 transition-colors group">
-                  <td className="px-6 py-3">
-                    <div className="w-12 h-12 bg-slate-800 rounded-lg overflow-hidden border border-slate-700 flex items-center justify-center p-1">
+            <tbody className="divide-y divide-slate-800/50">
+              {paginatedProducts.map(product => (
+                <tr key={product.id} className="hover:bg-slate-800/20 transition-colors group">
+                  <td className="px-6 py-4">
+                    <div className="w-12 h-12 bg-slate-950 rounded-xl overflow-hidden border border-slate-800 shadow-inner flex items-center justify-center p-1">
                       {product.imageUrl ? (
-                        <img src={product.imageUrl} alt={product.title} className="w-full h-full object-contain" />
+                        <img src={product.imageUrl} alt={product.title} className="w-full h-full object-contain drop-shadow" />
                       ) : (
-                        <Package className="w-6 h-6 text-slate-600" />
+                        <Package className="w-5 h-5 text-slate-700" />
                       )}
                     </div>
                   </td>
-                  <td className="px-6 py-3 text-sm font-mono font-medium text-custom-blue">{product.sku}</td>
-                  <td className="px-6 py-3 text-sm font-semibold text-white">{product.title}</td>
-                  <td className="px-6 py-3 text-sm font-bold text-teal-400">{product.inventory || 0}</td>
-                  <td className="px-6 py-3 text-sm text-slate-400">{product.unit}</td>
-                  <td className="px-6 py-3">
+                  <td className="px-6 py-4 text-sm font-mono font-bold text-custom-blue tracking-wide">{product.sku}</td>
+                  <td className="px-6 py-4 text-sm font-bold text-white tracking-tight">{product.title}</td>
+                  <td className="px-6 py-4">
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-black bg-slate-950 border border-slate-800 text-slate-300">
+                      {product.inventory || 0}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-sm font-medium text-slate-500">{product.unit}</td>
+                  <td className="px-6 py-4">
                     {product.shopifyProductId ? (
-                       <span className="inline-flex items-center px-2 py-1 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                       <span className="inline-flex items-center px-2.5 py-1 rounded border text-[10px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
                          Shopify
                        </span>
                     ) : product.mongoSynced ? (
-                       <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium bg-teal-500/10 text-teal-400 border border-teal-500/20">
-                         <DatabaseZap className="w-2.5 h-2.5" /> MongoDB
+                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded border text-[10px] font-black uppercase tracking-widest bg-custom-blue/10 text-custom-blue border-custom-blue/20">
+                         <DatabaseZap className="w-3 h-3" /> Cloud DB
                        </span>
                     ) : (
-                       <span className="inline-flex items-center px-2 py-1 rounded text-[10px] font-medium bg-slate-800 text-slate-500 border border-slate-700">
-                         Local
+                       <span className="inline-flex items-center px-2.5 py-1 rounded border text-[10px] font-black uppercase tracking-widest bg-slate-950 text-slate-400 border-slate-800 shadow-inner">
+                         Initial
                        </span>
                     )}
                   </td>
-                  <td className="px-6 py-3 text-right">
+                  <td className="px-6 py-4 text-right">
                     {canDelete && (
                       <button 
                         onClick={() => deleteProduct(product.id)} 
-                        className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
+                        className="p-2 text-slate-600 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
+                        title="Delete Product"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -513,21 +525,23 @@ export default function ProductsPage() {
                 </tr>
               ))}
 
-              {sortedProducts.length === 0 && (
+              {paginatedProducts.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-20 text-center">
-                    <div className="flex flex-col items-center justify-center">
-                      <Package className="w-12 h-12 text-slate-600 mb-4" />
-                      <h3 className="text-lg font-medium text-white mb-2">No products found</h3>
-                      <p className="text-sm text-slate-400 max-w-md">
-                        {searchTerm ? `No results for "${searchTerm}"` : 'Add products manually or upload a Shopify CSV file.'}
+                  <td colSpan={7} className="px-6 py-24 text-center">
+                    <div className="flex flex-col items-center justify-center animate-in fade-in slide-in-from-bottom-4">
+                      <div className="w-20 h-20 bg-slate-950 rounded-full border border-slate-800 flex items-center justify-center mb-6 shadow-inner">
+                         <Package className="w-8 h-8 text-slate-600" />
+                      </div>
+                      <h3 className="text-xl font-bold text-white mb-2 tracking-tight">No products found</h3>
+                      <p className="text-sm font-medium text-slate-500 max-w-md">
+                        {searchTerm ? `No results for "${searchTerm}"` : 'Your catalog is empty. Add products manually or sync from your Shopify store connection.'}
                       </p>
                       {!searchTerm && (
                         <button 
                           onClick={() => fileInputRef.current?.click()}
-                          className="mt-6 flex items-center px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-xl transition-colors border border-slate-700"
+                          className="mt-8 flex items-center px-6 py-3 bg-slate-950 hover:bg-slate-800 text-white font-bold text-sm tracking-widest uppercase rounded-2xl transition-all border border-slate-800 shadow-xl"
                         >
-                          <Upload className="w-4 h-4 mr-2" /> Upload Shopify CSV
+                          <Upload className="w-4 h-4 mr-3" /> Upload Catalog CSV
                         </button>
                       )}
                     </div>
@@ -537,6 +551,31 @@ export default function ProductsPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Section */}
+        {totalPages > 1 && (
+          <div className="border-t border-slate-800 p-4 bg-slate-900 flex justify-between items-center">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+              Page {currentPage} of {totalPages}
+            </span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all bg-slate-950 border border-slate-800 hover:bg-slate-800 text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all bg-slate-950 border border-slate-800 hover:bg-slate-800 text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next Page
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Clear Confirmation Modal */}

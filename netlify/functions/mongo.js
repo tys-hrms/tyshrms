@@ -3,14 +3,16 @@
 
 import { MongoClient, ObjectId } from 'mongodb';
 
-const MONGODB_URI = process.env.MONGODB_URI;
-const DB_NAME = process.env.MONGODB_DB || 'hrmscore_saas';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://tys_admin:tys%401234@cluster0.1oxlktm.mongodb.net/?appName=Cluster0';
+const DB_NAME = process.env.MONGODB_DB || 'hrmscore';
 
 const ALLOWED_COLLECTIONS = new Set([
   'users', 'products', 'assignments', 'worklogs', 'dispatches', 'leaves',
   'tasks', 'attendance', 'breaks', 'carry_forwards', 'app_settings',
   'defect_reasons', 'workflow_nodes', 'workflow_edges', 'notifications',
   'challenges', 'rbac_permissions', 'shifts', 'tenants',
+  'crm_leads', 'crm_orders', 'crm_tickets', 'payroll_records', 'salary_records',
+  'inventory_logs',
 ]);
 
 const headers = {

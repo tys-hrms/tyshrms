@@ -2,12 +2,17 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { AppSettings, ShopifySettings, MongoSettings, Shift, LeaveAutomationSettings, BrandingSettings } from '../types';
 import { db } from '../lib/database';
 
-const STORAGE_KEY = 'tys_hrms_settings_v2';
-const STORAGE_KEY_SHIFTS = 'tys_hrms_shifts_v2';
-
 function generateId(): string {
   return crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
+
+const DEFAULT_HOLIDAYS = [
+  { date: '2024-01-26', label: 'Republic Day', isWorking: false },
+  { date: '2024-08-15', label: 'Independence Day', isWorking: false },
+  { date: '2024-10-02', label: 'Gandhi Jayanti', isWorking: false },
+  { date: '2024-05-01', label: 'May Day / Labor Day', isWorking: false },
+  { date: '2024-12-25', label: 'Christmas', isWorking: false },
+];
 
 const DEFAULT_SETTINGS: AppSettings = {
   tenantId: '',
@@ -39,6 +44,14 @@ const DEFAULT_SETTINGS: AppSettings = {
     secondaryColor: '#14b8a6',
     accentColor: '#f59e0b',
     themeMode: 'dark',
+  },
+  state: 'Maharashtra',
+  payrollSettings: {
+    epfEnabled: true,
+    esiEnabled: true,
+    ptEnabled: true,
+    gratuityEnabled: true,
+    holidayList: DEFAULT_HOLIDAYS
   }
 };
 
@@ -48,13 +61,15 @@ interface SettingsContextType {
   settings: AppSettings;
   shifts: Shift[];
   isLoading: boolean;
-  updateSettings: (updates: Partial<AppSettings>) => void;
-  updateShopify: (data: Partial<ShopifySettings>) => void;
-  updateMongo: (data: Partial<MongoSettings>) => void;
-  updateLeaveAutomation: (data: Partial<LeaveAutomationSettings>) => void;
-  updateWorkstations: (data: AppSettings['workstations']) => void;
-  updateLocations: (data: AppSettings['locations']) => void;
-  updateBranding: (data: Partial<BrandingSettings>) => void;
+  isSyncing: boolean;
+  lastSyncedAt: number;
+  updateSettings: (updates: Partial<AppSettings>) => Promise<void>;
+  updateShopify: (data: Partial<ShopifySettings>) => Promise<void>;
+  updateMongo: (data: Partial<MongoSettings>) => Promise<void>;
+  updateLeaveAutomation: (data: Partial<LeaveAutomationSettings>) => Promise<void>;
+  updateWorkstations: (data: AppSettings['workstations']) => Promise<void>;
+  updateLocations: (data: AppSettings['locations']) => Promise<void>;
+  updateBranding: (data: Partial<BrandingSettings>) => Promise<void>;
   syncShopifyProducts: () => Promise<{ success: boolean; count?: number; error?: string }>;
   addShift: (data: Omit<Shift, 'id' | 'createdAt'>) => void;
   updateShift: (id: string, data: Partial<Shift>) => void;
@@ -64,157 +79,148 @@ interface SettingsContextType {
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [settings, setSettings] = useState<AppSettings>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (!stored) return DEFAULT_SETTINGS;
-      const parsed = JSON.parse(stored);
-      return {
-        ...DEFAULT_SETTINGS,
-        ...parsed,
-        shopify: { ...DEFAULT_SETTINGS.shopify, ...parsed.shopify },
-        mongodb: { ...DEFAULT_SETTINGS.mongodb, ...parsed.mongodb || {} },
-        leaveAutomation: { ...DEFAULT_SETTINGS.leaveAutomation, ...parsed.leaveAutomation || {} },
-        branding: { ...DEFAULT_SETTINGS.branding, ...parsed.branding || {} },
-      };
-    } catch { return DEFAULT_SETTINGS; }
-  });
-
-  const [shifts, setShifts] = useState<Shift[]>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY_SHIFTS);
-      return stored ? JSON.parse(stored) : DEFAULT_SHIFTS;
-    } catch { return DEFAULT_SHIFTS; }
-  });
-
+  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+  const [shifts, setShifts] = useState<Shift[]>(DEFAULT_SHIFTS);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<number>(Date.now());
 
-  useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(settings)); }, [settings]);
-  useEffect(() => { localStorage.setItem(STORAGE_KEY_SHIFTS, JSON.stringify(shifts)); }, [shifts]);
+  const loadCloudSettings = async () => {
+    if (!settings.tenantId) return;
+    try {
+      const [cSettings, cShifts] = await Promise.all([
+        db.tenants.getSettings(settings.tenantId),
+        db.getAll<Shift>('shifts')
+      ]);
 
-  // --- Cloud Initialization (Tenant Scoped) ---
+      if (cSettings) {
+        setSettings(prev => ({ 
+          ...prev, 
+          ...cSettings,
+          shopify: { ...prev.shopify, ...cSettings.shopify },
+          mongodb: { ...prev.mongodb, ...cSettings.mongodb },
+          branding: { ...prev.branding, ...cSettings.branding || {} }
+        }));
+      }
+      if (cShifts.length) setShifts(cShifts);
+      setLastSyncedAt(Date.now());
+    } catch (err) {
+      console.warn('[SettingsSync] Silent load failed:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!settings.tenantId) {
       setIsLoading(false);
       return;
     }
-
-    const loadCloudSettings = async () => {
-      setIsLoading(true);
-      try {
-        const [cSettings, cShifts] = await Promise.all([
-          db.tenants.getSettings(settings.tenantId),
-          db.getAll<Shift>('shifts') // Shifts are currently global, but could be scoped too
-        ]);
-
-        if (cSettings) {
-          setSettings(prev => ({ 
-            ...prev, 
-            ...cSettings,
-            shopify: { ...prev.shopify, ...cSettings.shopify },
-            mongodb: { ...prev.mongodb, ...cSettings.mongodb },
-            branding: { ...prev.branding, ...cSettings.branding || {} }
-          }));
-        }
-        if (cShifts.length) setShifts(cShifts);
-      } catch (err) {
-        console.error('[SettingsSync] Failed:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     loadCloudSettings();
   }, [settings.tenantId]);
 
-  const updateSettings = (updates: Partial<AppSettings>) => {
-    setSettings(prev => {
-      const next = { ...prev, ...updates };
-      if (next.tenantId) {
-        db.tenants.saveSettings(next.tenantId, next);
-      }
-      return next;
-    });
+  useEffect(() => {
+    if (!settings.tenantId || isSyncing) return;
+    const interval = setInterval(loadCloudSettings, 1500);
+    return () => clearInterval(interval);
+  }, [settings.tenantId, isSyncing]);
+
+  const persistSettings = async (next: AppSettings) => {
+    if (!next.tenantId) return;
+    setIsSyncing(true);
+    try {
+      await db.tenants.saveSettings(next.tenantId, next);
+      setLastSyncedAt(Date.now());
+    } catch (e) {
+      console.error('[Persistence] Settings failed to push:', e);
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
-  const updateShopify = (data: Partial<ShopifySettings>) => {
-    setSettings(prev => {
-      const next = { ...prev, shopify: { ...prev.shopify, ...data } };
-      if (next.tenantId) db.tenants.saveSettings(next.tenantId, next);
-      return next;
-    });
+  const updateSettings = async (updates: Partial<AppSettings>) => {
+    const next = { ...settings, ...updates };
+    setSettings(next);
+    await persistSettings(next);
   };
 
-  const updateMongo = (data: Partial<MongoSettings>) => {
-    setSettings(prev => {
-      const next = { ...prev, mongodb: { ...prev.mongodb, ...data } };
-      if (next.tenantId) db.tenants.saveSettings(next.tenantId, next);
-      return next;
-    });
+  const updateShopify = async (data: Partial<ShopifySettings>) => {
+    const next = { ...settings, shopify: { ...settings.shopify, ...data } };
+    setSettings(next);
+    await persistSettings(next);
   };
 
-  const updateLeaveAutomation = (data: Partial<LeaveAutomationSettings>) => {
-    setSettings(prev => {
-      const next = { ...prev, leaveAutomation: { ...prev.leaveAutomation, ...data } };
-      if (next.tenantId) db.tenants.saveSettings(next.tenantId, next);
-      return next;
-    });
+  const updateMongo = async (data: Partial<MongoSettings>) => {
+    const next = { ...settings, mongodb: { ...settings.mongodb, ...data } };
+    setSettings(next);
+    await persistSettings(next);
   };
 
-  const updateWorkstations = (data: AppSettings['workstations']) => {
-    setSettings(prev => {
-      const next = { ...prev, workstations: data };
-      if (next.tenantId) db.tenants.saveSettings(next.tenantId, next);
-      return next;
-    });
+  const updateLeaveAutomation = async (data: Partial<LeaveAutomationSettings>) => {
+    const next = { ...settings, leaveAutomation: { ...settings.leaveAutomation, ...data } };
+    setSettings(next);
+    await persistSettings(next);
   };
 
-  const updateLocations = (data: AppSettings['locations']) => {
-    setSettings(prev => {
-      const next = { ...prev, locations: data };
-      if (next.tenantId) db.tenants.saveSettings(next.tenantId, next);
-      return next;
-    });
+  const updateWorkstations = async (data: AppSettings['workstations']) => {
+    const next = { ...settings, workstations: data };
+    setSettings(next);
+    await persistSettings(next);
   };
 
-  const updateBranding = (data: Partial<BrandingSettings>) => {
-    setSettings(prev => {
-      const next = { ...prev, branding: { ...prev.branding, ...data } };
-      if (next.tenantId) db.tenants.saveSettings(next.tenantId, next);
-      return next;
-    });
+  const updateLocations = async (data: AppSettings['locations']) => {
+    const next = { ...settings, locations: data };
+    setSettings(next);
+    await persistSettings(next);
+  };
+
+  const updateBranding = async (data: Partial<BrandingSettings>) => {
+    const next = { ...settings, branding: { ...settings.branding, ...data } };
+    setSettings(next);
+    await persistSettings(next);
   };
 
   const syncShopifyProducts = async (): Promise<{ success: boolean; count?: number; error?: string }> => {
     return { success: false, error: 'Shopify sync requires an edge function.' };
   };
 
-  const addShift = (data: Omit<Shift, 'id' | 'createdAt'>) => {
+  const addShift = async (data: Omit<Shift, 'id' | 'createdAt'>) => {
     const shift: Shift = { ...data, id: generateId(), createdAt: new Date().toISOString() };
-    setShifts(prev => {
-      const next = [...prev, shift];
-      db.save('shifts', shift);
-      return next;
-    });
+    setShifts(prev => [...prev, shift]);
+    setIsSyncing(true);
+    try {
+      await db.save('shifts', shift);
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
-  const updateShift = (id: string, data: Partial<Shift>) => {
-    setShifts(prev => {
-      const next = prev.map(s => s.id === id ? { ...s, ...data } : s);
-      const updated = next.find(s => s.id === id);
-      if (updated) db.save('shifts', updated);
-      return next;
-    });
+  const updateShift = async (id: string, data: Partial<Shift>) => {
+    setShifts(prev => prev.map(s => s.id === id ? { ...s, ...data } : s));
+    const target = shifts.find(s => s.id === id);
+    if (target) {
+      setIsSyncing(true);
+      try {
+        await db.save('shifts', { ...target, ...data });
+      } finally {
+        setIsSyncing(false);
+      }
+    }
   };
 
-  const deleteShift = (id: string) => {
+  const deleteShift = async (id: string) => {
     setShifts(prev => prev.filter(s => s.id !== id));
-    db.delete('shifts', id);
+    setIsSyncing(true);
+    try {
+      await db.delete('shifts', id);
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   return (
     <SettingsContext.Provider value={{
-      settings, shifts, isLoading,
+      settings, shifts, isLoading, isSyncing, lastSyncedAt,
       updateSettings, updateShopify, updateMongo, updateLeaveAutomation, updateWorkstations, updateLocations, updateBranding,
       syncShopifyProducts,
       addShift, updateShift, deleteShift,

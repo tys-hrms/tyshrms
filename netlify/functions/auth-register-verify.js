@@ -1,7 +1,7 @@
 import { verifyRegistrationResponse } from '@simplewebauthn/server';
 import { MongoClient } from 'mongodb';
 
-const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://tys_admin:tys%401234@cluster0.1oxlktm.mongodb.net/?appName=Cluster0';
 const DB_NAME = process.env.MONGODB_DB || 'tys_hrms';
 const Origin = process.env.URL || 'http://localhost:5173';
 const RP_ID = new URL(Origin).hostname;

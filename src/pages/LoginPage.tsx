@@ -97,8 +97,8 @@ export default function LoginPage() {
   const handleDiscovery = async (e: React.FormEvent) => {
     e.preventDefault();
     setDiscoveryError('');
-    if (!/^\d{6}$/.test(orgId)) {
-      setDiscoveryError('Organization ID must be 6 digits');
+    if (!/^\d{6}$|^\d{2}-\d{4}$/.test(orgId)) {
+      setDiscoveryError('Organization ID must be 6 digits (e.g. 26-4533)');
       return;
     }
 
@@ -237,7 +237,7 @@ export default function LoginPage() {
                     <input
                       type="text"
                       value={orgId}
-                      onChange={e => setOrgId(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      onChange={e => setOrgId(e.target.value.replace(/[^\d-]/g, '').slice(0, 7))}
                       placeholder="Organization ID"
                       className="w-full bg-slate-950 border border-slate-800 p-4 pl-12 text-center text-2xl font-mono font-black text-brand-400 tracking-[0.3em] focus:border-brand-500 outline-none transition-colors"
                       inputMode="numeric"
@@ -309,6 +309,17 @@ export default function LoginPage() {
                   </button>
                 </div>
 
+                {/* Change Org Context (Moved and made clearer) */}
+                <div className="mt-8 pt-4 border-t border-slate-800 text-center">
+                   <button 
+                    onClick={resetDiscovery}
+                    className="flex items-center justify-center gap-2 mx-auto text-[10px] font-bold text-slate-500 hover:text-white uppercase tracking-widest transition-all"
+                  >
+                    <ArrowLeft className="w-3 h-3" />
+                    Switch Organization
+                  </button>
+                </div>
+
                 {authError && (
                   <div className="bg-red-500/10 border border-red-500/20 p-3 text-red-400 text-xs font-bold text-center">
                     {authError}
@@ -355,6 +366,16 @@ export default function LoginPage() {
                     >
                       {isAuthenticating ? 'Verifying...' : 'Unlock Dashboard'}
                     </button>
+                    
+                    <div className="text-center">
+                      <button 
+                        type="button"
+                        onClick={() => alert('Please contact the System Admin to reset your Security PIN.')}
+                        className="text-[10px] text-slate-500 hover:text-brand-400 font-bold uppercase tracking-widest"
+                      >
+                        Forgot Access PIN?
+                      </button>
+                    </div>
                   </form>
                 ) : (
                   /* STAFF LOGIN */
@@ -412,6 +433,16 @@ export default function LoginPage() {
                         </>
                       )}
                     </button>
+                    
+                    <div className="text-center">
+                      <button 
+                        type="button"
+                        onClick={() => alert('Please contact your Branch Manager or Administrator to reset your Staff PIN.')}
+                        className="text-[10px] text-slate-500 hover:text-brand-400 font-bold uppercase tracking-widest"
+                      >
+                        Forgot Staff PIN?
+                      </button>
+                    </div>
                     
                     <p className="text-[10px] text-slate-500 text-center uppercase tracking-widest">
                       Biometric-first authentication enabled

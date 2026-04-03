@@ -10,6 +10,7 @@ export default function MongoSettings() {
   const { migrateLocalToCloud: migrateAuth } = useAuth();
   const [isMigrating, setIsMigrating] = useState(false);
   const [migrationResult, setMigrationResult] = useState<{ success: boolean; count: number } | null>(null);
+  const [isSaved, setIsSaved] = useState(false);
 
   if (!settings.mongodb) {
     return (
@@ -45,7 +46,8 @@ export default function MongoSettings() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    alert('MongoDB Settings saved!');
+    setIsSaved(true);
+    setTimeout(() => setIsSaved(false), 3000);
   };
 
   return (
@@ -150,7 +152,12 @@ export default function MongoSettings() {
             </div>
           </div>
 
-          <div className="pt-4 flex justify-end">
+          <div className="pt-4 flex justify-end gap-4 items-center">
+            {isSaved && (
+               <span className="text-emerald-400 text-sm font-bold flex items-center gap-2 animate-in fade-in zoom-in">
+                 <CheckCircle2 className="w-5 h-5" /> Saved
+               </span>
+            )}
             <button
               type="submit"
               className="flex items-center px-6 py-2.5 bg-custom-blue hover:bg-blue-600 text-white rounded-xl text-sm font-medium transition-colors shadow-lg shadow-custom-blue/20"

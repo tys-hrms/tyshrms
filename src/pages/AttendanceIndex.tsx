@@ -3,16 +3,22 @@ import { CalendarDays, Plane, Printer } from 'lucide-react';
 
 import AttendancePage from './attendance/AttendancePage';
 import LeaveManagement from './attendance/LeaveManagement';
+import AttendanceGrid from '../components/hr/AttendanceGrid';
+import { useAuth } from '../contexts/AuthContext';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 
 type Tab = 'attendance' | 'leaves';
 
 export default function AttendanceIndex() {
-  const [activeTab, setActiveTab] = useState<Tab>('attendance');
+  const [activeTab, setActiveTab] = useState<Tab | 'grid'>('attendance');
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   const { settings } = useSettings();
+  const { attendanceLogs } = useAuth();
 
   const tabs = [
     { id: 'attendance', label: 'Daily Attendance', icon: CalendarDays },
+    { id: 'grid', label: 'Monthly Matrix', icon: CalendarDays },
     { id: 'leaves', label: 'Leave Requests', icon: Plane },
   ] as const;
 
@@ -77,6 +83,39 @@ export default function AttendanceIndex() {
       {/* Tab Content Area */}
       <div className="pt-4">
         {activeTab === 'attendance' && <AttendancePage />}
+        {activeTab === 'grid' && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between bg-slate-900/50 p-4 rounded-2xl border border-white/5">
+                <div className="flex items-center gap-4">
+                  <button 
+                    onClick={() => {
+                        const d = new Date(selectedMonth + '-01');
+                        d.setMonth(d.getMonth() - 1);
+                        setSelectedMonth(d.toISOString().slice(0, 7));
+                    }}
+                    className="p-2 hover:bg-white/5 rounded-lg text-slate-400"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <h3 className="text-lg font-bold text-white uppercase tracking-tight">{new Date(selectedMonth + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</h3>
+                  <button 
+                    onClick={() => {
+                        const d = new Date(selectedMonth + '-01');
+                        d.setMonth(d.getMonth() + 1);
+                        setSelectedMonth(d.toISOString().slice(0, 7));
+                    }}
+                    className="p-2 hover:bg-white/5 rounded-lg text-slate-400"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-4 border-l border-white/5">
+                    Monthly Performance View
+                </div>
+            </div>
+            <AttendanceGrid month={selectedMonth} logs={attendanceLogs} />
+          </div>
+        )}
         {activeTab === 'leaves' && <LeaveManagement />}
       </div>
     </div>

@@ -11,18 +11,35 @@ export interface Tenant {
   employeeCount: string;
   email: string;
   phone: string;
+  companySlug?: string; // e.g. "acme-corp"
   gst?: string;
   isActive: boolean;
+  
+  // Regional & Payroll Compliance (V9)
+  state: string;           // Indian State (e.g. "Maharashtra", "Karnataka")
+  payrollSettings: {
+    epfEnabled: boolean;
+    esiEnabled: boolean;
+    ptEnabled: boolean;
+    gratuityEnabled: boolean;
+    holidayList: {
+      date: string;
+      label: string;
+      isWorking: boolean; 
+    }[];
+    weekends?: number[]; // [0, 6] for Sat/Sun
+  };
+  
   createdAt: string;
 }
 
 // ─── User & Auth ───────────────────────────────────────────────────────────
 
-export type UserRole = 'Admin' | 'Manager' | 'Worker';
+export type UserRole = string; // E.g., 'Admin', 'Manager', 'Worker', or custom types
 
 export interface Shift {
   id: string;
-  tenantId: string;
+  tenantId?: string;
   name: string;
   startTime: string;    // "HH:MM"
   endTime: string;
@@ -40,10 +57,15 @@ export interface BiometricCredential {
 
 export interface User {
   id: string;
-  tenantId: string;
+  tenantId?: string;
   name: string;
   pinCode: string;
   role: UserRole;
+  salaryDetails?: {
+    basicSalary: number;
+    allowances: number;
+    epfEnabled: boolean;
+  };
   email?: string;
   phone?: string;
   contactNumber?: string;
@@ -59,6 +81,15 @@ export interface User {
     sick: number;
     annual: number;
   };
+  salaryStructure?: {
+    basic: number;
+    hra: number;
+    otherAllowances: number;
+    isEpfMember: boolean;
+    isEsiMember: boolean;
+    isPtMember: boolean;
+    gratuityEnabled: boolean;
+  };
 }
 
 
@@ -73,7 +104,9 @@ export type AppModule =
   | 'leaves'
   | 'settings'
   | 'rbac'
-  | 'reports';
+  | 'reports'
+  | 'crm'
+  | 'payroll';
 
 export type PermissionAction = 'view' | 'create' | 'edit' | 'delete';
 export type PermissionScope = 'none' | 'location' | 'global';
@@ -87,7 +120,9 @@ export interface RolePermission {
   deleteScope: PermissionScope;
   features?: {
     biometricAllowed?: boolean;
-    // can add more here like: mobileAccess?: boolean;
+    systemPrintAllowed?: boolean;
+    aiAssistantAllowed?: boolean;
+    calculatorAllowed?: boolean;
   };
 }
 
@@ -98,7 +133,7 @@ export type TaskMode = 'single' | 'jodi';
 
 export interface TaskDefinition {
   id: string;
-  tenantId: string;
+  tenantId?: string;
   name: TaskType;
   allowedModes: TaskMode[];  // Ironing/Checking: both; Labeling/Packing: ['single']
   defaultMode: TaskMode;
@@ -110,7 +145,7 @@ export interface TaskDefinition {
 
 export interface Product {
   id: string;
-  tenantId: string;
+  tenantId?: string;
   sku: string;
   title: string;
   barcode?: string;
@@ -130,7 +165,7 @@ export type AssignmentStatus = 'pending' | 'in_progress' | 'completed' | 'paused
 
 export interface Assignment {
   id: string;
-  tenantId: string;
+  tenantId?: string;
   date: string;                    // "YYYY-MM-DD"
   dueDate?: string;
   userId: string;
@@ -149,6 +184,14 @@ export interface Assignment {
   updatedAt: string;
 }
 
+export interface CRMInteraction {
+  id: string;
+  type: 'call' | 'whatsapp' | 'email' | 'note' | 'meeting';
+  note: string;
+  createdBy: string;
+  createdAt: string;
+}
+
 // pending balance = piecesAssigned + piecesCarriedForward - piecesCompleted
 
 // ─── Work Logs ─────────────────────────────────────────────────────────────
@@ -162,7 +205,7 @@ export interface AssignmentCarryForward {
 
 export interface WorkLog {
   id: string;
-  tenantId: string;
+  tenantId?: string;
   assignmentId: string;
   userId: string;
   date: string;
@@ -181,7 +224,7 @@ export interface WorkLog {
 
 export interface DefectReason {
   id: string;
-  tenantId: string;
+  tenantId?: string;
   label: string;
 }
 
@@ -192,7 +235,7 @@ export type AttendanceMethod = 'manual' | 'auto';
 
 export interface AttendanceLog {
   id: string;
-  tenantId: string;
+  tenantId?: string;
   userId: string;
   date: string;
   clockIn?: string;
@@ -201,7 +244,25 @@ export interface AttendanceLog {
   latLngOut?: string;
   method: AttendanceMethod;
   totalMinutes?: number;
-  status: 'present' | 'absent' | 'on_leave' | 'half_day';
+  status: 'present' | 'absent' | 'on_leave' | 'half_day' | 'holiday';
+}
+
+export interface SalaryRecord {
+  id: string;
+  tenantId: string;
+  userId: string;
+  month: string; // YYYY-MM
+  workingDays: number;
+  grossPay: number;
+  epfDeduction: number;
+  esiDeduction: number;
+  ptDeduction: number;
+  otherDeductions: number;
+  netPay: number;
+  status: 'draft' | 'processed' | 'paid';
+  createdAt: string;
+  processedAt?: string;
+  paidAt?: string;
 }
 
 export interface BreakLog {
@@ -213,41 +274,30 @@ export interface BreakLog {
 
 // ─── Leave Management ──────────────────────────────────────────────────────
 
-export type LeaveType = 'casual' | 'sick' | 'annual' | 'unpaid';
-export type LeaveStatus = 'pending' | 'approved' | 'rejected';
-
-export interface LeaveRequest {
-  id: string;
-  tenantId: string;
-  userId: string;
-  date: string;
-  type: LeaveType;
-  reason?: string;
-  status: LeaveStatus;
-  reviewedBy?: string;
-  reviewedAt?: string;
-  createdAt: string;
-}
+export type LeaveType = 'casual' | 'sick' | 'annual' | 'unpaid' | 'medical';
+export type LeaveStatus = 'pending_manager' | 'pending_admin' | 'approved' | 'rejected' | 'cancelled' | 'pending';
 
 export interface LeaveLog {
   id: string;
-  tenantId: string;
+  tenantId?: string;
   userId: string;
   date: string; // Start Date
   endDate?: string;
   totalDays: number;
   type: LeaveType;
-  status: LeaveStatus;
   reason: string;
-  reviewedBy?: string;
+  status: LeaveStatus;
+  reviewedBy?: string;     // Final Approval (Admin/Manager)
   reviewedAt?: string;
+  managerApprovedBy?: string; // Step 1 of Hierarchy
+  medicalCertificateUrl?: string; // V9 Upload Feature
 }
 
 // ─── Shipments & Dispatch ──────────────────────────────────────────────────
 
 export interface InboundShipment {
   id: string;
-  tenantId: string;
+  tenantId?: string;
   receiverId: string;
   sku: string;
   quantity: number;
@@ -259,7 +309,7 @@ export interface InboundShipment {
 
 export interface DispatchBatch {
   id: string;
-  tenantId: string;
+  tenantId?: string;
   packerId: string;
   sku?: string;
   labelScanned?: string;
@@ -298,7 +348,7 @@ export interface LeaveAutomationSettings {
 
 export interface Workstation {
   id: string;
-  tenantId: string;
+  tenantId?: string;
   name: string;      // e.g. "Table 1"
   taskTypes: string[]; // e.g. ["Checking", "Ironing"]
 }
@@ -307,7 +357,7 @@ export type LocationType = 'head_office' | 'branch' | 'warehouse';
 
 export interface Location {
   id: string;
-  tenantId: string;
+  tenantId?: string;
   name: string;
   type: LocationType;
   address?: string;
@@ -334,6 +384,23 @@ export interface AppSettings {
   workstations: Workstation[];
   locations: Location[];
   branding: BrandingSettings;
+  
+  // Regional & Payroll (V9)
+  state: string;
+  payrollSettings: {
+    epfEnabled: boolean;
+    esiEnabled: boolean;
+    ptEnabled: boolean;
+    gratuityEnabled: boolean;
+    holidayList: {
+      date: string;
+      label: string;
+      isWorking: boolean;
+    }[];
+    weekends?: number[];
+  };
+  // AI Configuration (cloud-stored, not localStorage)
+  openAiKey?: string;
 }
 
 
@@ -341,13 +408,14 @@ export interface AppSettings {
 
 export interface Notification {
   id: string;
-  tenantId: string;
+  tenantId?: string;
   userId: string;      // recipient
   senderId?: string;   // who triggered it
   title: string;
   message: string;
-  type: 'assignment' | 'leave' | 'system' | 'alert';
+  type: 'assignment' | 'leave' | 'system' | 'alert' | 'crm_lead' | 'crm_breach' | 'success';
   read: boolean;
+  ticketId?: string; // Link to CRM Ticket if applicable
   createdAt: string;
 }
 
@@ -370,3 +438,133 @@ export interface DailyStats {
   pendingAssignments: number;
 }
 
+// ─── CRM & Lead Management ────────────────────────────────────────────────
+ 
+export type CRMLeadSource = 
+  | 'whatsapp' 
+  | 'instagram' 
+  | 'facebook' 
+  | 'linkedin' 
+  | 'youtube' 
+  | 'word_of_mouth' 
+  | 'other' 
+  | 'manual';
+
+export interface CRMOrderItem {
+  sku: string;
+  quantity: number;
+  basePrice: number;
+  discountPercent: number; // Applied per-line
+  gstPercent: number;      // 0, 5, 12, 18
+  total: number;
+}
+
+export type CRMLeadStage = string; // e.g. "Lead In", "Negotiation", "Fulfillment"
+
+export interface CRMLead {
+  id: string;              // Internal ID
+  ticketNumber: string;    // TKT-YYYY-DDMM-XXXXXX
+  tenantId: string;
+  source: CRMLeadSource;
+  sourceNotes?: string;    // For "other" or manual details
+  
+  // Qualification (V8/V10)
+  businessType: string;
+  leadTemperature: 'Cold' | 'Warm' | 'Hot';
+  expectedTimeline: string;
+  clientCategory: 'B2B' | 'B2C';
+  leadBrief?: string;
+  
+  // Contact Info
+  customerName: string;
+  companyName?: string;
+  phone: string;
+  email?: string;
+  address?: string;
+  gstNumber?: string;
+  isGstCompliant: boolean;
+
+  // Assignment & Hierarchy
+  primaryRepId?: string;   // Clocked-in Rep
+  taggedRepIds: string[];  // Multiple collaborative reps
+  assignedManagerId?: string; // Failsafe redirection
+  // Engagement
+  stage: CRMLeadStage;
+  status: 'active' | 'won' | 'lost' | 'archived';
+  priority: 'low' | 'medium' | 'high';
+  interactions?: CRMInteraction[];
+
+  // Financials
+  items: CRMOrderItem[];
+  transportationCharges: number;
+  totalValue: number;
+  currency: string;        // Default "INR"
+  
+  // SLA & Timers
+  createdAt: string;
+  updatedAt: string;
+  slaBreachAt: string;     // ISO String calculation based on settings
+  isBreached: boolean;
+
+  // Conversion
+  convertedOrderId?: string;
+  
+  // Metadata
+  lastContactedAt?: string;
+  nextFollowUpAt?: string;
+}
+
+export type OrderFulfillmentStatus = 
+  | 'ordered' 
+  | 'fulfilled' 
+  | 'dispatched' 
+  | 'delivered';
+
+export interface CRMOrder {
+  id: string;
+  ticketNumber: string;
+  tenantId: string;
+  leadId: string;
+  customerId: string;
+  items: CRMOrderItem[];
+  totalValue: number;
+  fulfillmentStatus: OrderFulfillmentStatus;
+  trackingNumber?: string;
+  dispatchedAt?: string;
+  deliveredAt?: string;
+  createdAt: string;
+}
+
+export interface CRMSettings {
+  tenantId: string;
+  ticketPrefix: string;    // e.g. "TKT"
+  enableSmartAssignment: boolean;
+  
+  // SLA Timers in minutes
+  slaConfig: {
+    whatsapp: number;
+    instagram: number;
+    facebook: number;
+    linkedin: number;
+    youtube: number;
+    word_of_mouth: number;
+    manual: number;
+    other: number;
+  };
+  
+  // Pipeline Workflow
+  stages: {
+    id: string;
+    label: string;
+    color: string;
+    order: number;
+  }[];
+  
+  badges: {
+    label: string;
+    color: string;
+  }[];
+
+  // Escalation Matrix
+  escalationUserIds?: string[];
+}

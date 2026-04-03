@@ -70,8 +70,8 @@ export default function WorkforceFAB({ onBreakStart, onBreakEnd }: WorkforceFABP
         </div>
       )}
 
-      {/* FAB */}
-      <div className="fixed bottom-24 right-4 z-50 flex flex-col items-end gap-3">
+      {/* FAB Wrapper (now standard flex within ActionCluster) */}
+      <div className="z-50 flex flex-col items-end gap-3">
         {/* Action buttons */}
         {open && (
           <div className="flex flex-col items-end gap-2 animate-slide-up">

@@ -1,21 +1,72 @@
 import React, { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useApp } from '../contexts/AppContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { 
   CheckCircle2, Clock, Users, Package, TrendingUp, AlertCircle, 
   Shirt, Search, Tag, Box, MessageSquare, ShieldAlert, CheckSquare,
-  Printer
+  Printer, BarChart3, PieChart, Activity
 } from 'lucide-react';
+import { 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+  PieChart as RePie, Pie, Cell, AreaChart, Area, RadarChart, PolarGrid, 
+  PolarAngleAxis, Radar, Legend
+} from 'recharts';
+import { useCRM } from '../contexts/CRMContext';
 
 export default function AdminDashboard() {
-  const { session, users } = useAuth();
-  const { getDailyStats, notifications, markNotificationRead } = useApp();
+  const navigate = useNavigate();
+  const { session, users, attendanceLogs } = useAuth();
+  const { getDailyStats, notifications, markNotificationRead, workLogs } = useApp();
   const { settings } = useSettings();
+  
+  const { leads } = useCRM();
   
   const today = new Date().toISOString().split('T')[0];
   const stats = useMemo(() => getDailyStats(today), [getDailyStats, today]);
   const urgentAlerts = notifications.filter(n => n.type === 'alert' && !n.read);
+
+  // --- Chart Data Calculations ---
+  
+  // 1. Weekly Attendance Tracking
+  const weeklyAttendanceData = useMemo(() => {
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (6 - i));
+      return d.toISOString().split('T')[0];
+    });
+
+    return last7Days.map(date => ({
+      name: new Date(date).toLocaleDateString('en-GB', { weekday: 'short' }),
+      count: attendanceLogs.filter((l: any) => l.date === date).length
+    }));
+  }, [attendanceLogs]);
+
+  // 2. CRM Stage Distribution
+  const crmStageData = useMemo(() => {
+    const stages = [
+      { id: 'lead_in', label: 'Lead In', color: '#3b82f6' },
+      { id: 'qualification', label: 'Qualified', color: '#8b5cf6' },
+      { id: 'negotiation', label: 'Negotiation', color: '#f59e0b' },
+      { id: 'fulfillment', label: 'Closed', color: '#10b981' },
+    ];
+    return stages.map(s => ({
+      name: s.label,
+      value: leads.filter(l => l.stage === s.id).length,
+      color: s.color
+    })).filter(s => s.value > 0);
+  }, [leads]);
+
+  // 3. Workforce Productivity (Radar)
+  const productivityData = useMemo(() => {
+    const taskTypes = ['Ironing', 'Checking', 'Labelling', 'Packing'];
+    return taskTypes.map(type => ({
+      subject: type,
+      A: workLogs.filter((l: any) => l.taskType?.toLowerCase().includes(type.toLowerCase().slice(0, 4))).length,
+      fullMark: 150
+    }));
+  }, [workLogs]);
 
   const handlePrint = () => {
     window.print();
@@ -78,25 +129,44 @@ export default function AdminDashboard() {
       </div>
 
       {/* Main KPI Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        {cards.map((c, i) => {
-          const Icon = c.icon;
-          return (
-            <div key={i} className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-              <div className="flex items-start justify-between">
-                <div className={`p-3 rounded-xl ${c.bg}`}>
-                  <Icon className={`w-6 h-6 ${c.color}`} />
+      {stats.totalPiecesAssigned === 0 ? (
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-12 text-center flex flex-col items-center justify-center animate-in zoom-in duration-500">
+           <div className="w-20 h-20 bg-custom-blue/10 rounded-full flex items-center justify-center mb-6">
+              <Package className="w-10 h-10 text-custom-blue" />
+           </div>
+           <h2 className="text-xl font-bold text-white mb-2">Welcome to your HRMS Operations</h2>
+           <p className="text-slate-400 text-sm max-w-md mb-8">
+              You haven't assigned any pieces yet today. Head over to the Assignments page to start tracking your workforce productivity.
+           </p>
+           <button 
+            onClick={() => navigate('assignments')}
+            className="px-6 py-3 bg-custom-blue hover:bg-blue-600 text-white rounded-xl font-bold text-sm transition-all flex items-center gap-2"
+           >
+             <Package className="w-4 h-4" />
+             Create First Assignment
+           </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+          {cards.map((c, i) => {
+            const Icon = c.icon;
+            return (
+              <div key={i} className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+                <div className="flex items-start justify-between">
+                  <div className={`p-3 rounded-xl ${c.bg}`}>
+                    <Icon className={`w-6 h-6 ${c.color}`} />
+                  </div>
+                  <TrendingUp className="w-4 h-4 text-slate-600" />
                 </div>
-                <TrendingUp className="w-4 h-4 text-slate-600" />
+                <div className="mt-4">
+                  <p className="text-3xl font-bold text-white">{c.value}</p>
+                  <p className="text-sm font-medium text-slate-400 mt-1">{c.label}</p>
+                </div>
               </div>
-              <div className="mt-4">
-                <p className="text-3xl font-bold text-white">{c.value}</p>
-                <p className="text-sm font-medium text-slate-400 mt-1">{c.label}</p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
@@ -148,34 +218,104 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Progress Card */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 lg:col-span-2">
-          <h2 className="text-lg font-semibold text-white mb-6">Today's Progress</h2>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-slate-400">Total Assignments (Included Carried)</span>
-            <span className="text-sm font-bold text-white">{progress}% Complete</span>
-          </div>
-          <div className="h-4 bg-slate-800 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-gradient-to-r from-custom-blue to-teal-400 rounded-full transition-all duration-1000"
-              style={{ width: `${progress}%` }}
-            />
+        {/* Real-time Analytics Section */}
+        <div className="lg:col-span-2 space-y-6">
+          
+          {/* Charts Row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            {/* Attendance Chart */}
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-emerald-500" />
+                  Workforce Presence
+                </h3>
+                <span className="text-[10px] font-bold text-slate-500 uppercase italic">Last 7 Days</span>
+              </div>
+              <div className="h-48 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={weeklyAttendanceData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 10}} />
+                    <Tooltip 
+                      contentStyle={{backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '12px', fontSize: '10px'}}
+                      itemStyle={{color: '#fff'}}
+                    />
+                    <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={20} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* CRM Distribution */}
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
+               <div className="flex items-center justify-between mb-6">
+                <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+                  <PieChart className="w-4 h-4 text-custom-blue" />
+                  Lead Funnel
+                </h3>
+               </div>
+               <div className="h-48 w-full relative">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RePie>
+                      <Pie
+                        data={crmStageData}
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {crmStageData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        contentStyle={{backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '12px', fontSize: '10px'}}
+                      />
+                    </RePie>
+                  </ResponsiveContainer>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                     <span className="text-xl font-black text-white">{leads.length}</span>
+                     <span className="text-[8px] font-bold text-slate-500 uppercase">Leads</span>
+                  </div>
+               </div>
+            </div>
+
           </div>
 
-          <div className="grid grid-cols-4 gap-4 mt-8 pt-6 border-t border-slate-800">
-            {taskBreakdown.map((t, i) => {
-              const Icon = t.icon;
-              return (
-                <div key={i} className="text-center">
-                  <div className="inline-flex items-center justify-center p-2 bg-slate-800 rounded-lg mb-2">
-                    <Icon className={`w-5 h-5 ${t.color}`} />
-                  </div>
-                  <p className="text-xl font-bold text-white">{t.value}</p>
-                  <p className="text-xs font-medium text-slate-500 uppercase">{t.label}</p>
+          {/* Productivity Radar & Today's Summary */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
+                <h3 className="text-sm font-black text-white uppercase tracking-widest mb-6 block">Task Efficiency</h3>
+                <div className="h-64 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart cx="50%" cy="50%" outerRadius={80} data={productivityData}>
+                      <PolarGrid stroke="#1e293b" />
+                      <PolarAngleAxis dataKey="subject" tick={{fill: '#64748b', fontSize: 10}} />
+                      <Radar name="Productivity" dataKey="A" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.6} />
+                    </RadarChart>
+                  </ResponsiveContainer>
                 </div>
-              );
-            })}
+             </div>
+
+             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col justify-center">
+                <h3 className="text-sm font-black text-white uppercase tracking-widest mb-4">Live Productivity</h3>
+                <div className="space-y-4">
+                   <div className="flex justify-between items-end">
+                      <span className="text-xs text-slate-400">Completion Rate</span>
+                      <span className="text-lg font-black text-emerald-500">{progress}%</span>
+                   </div>
+                   <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                      <div className="h-full bg-emerald-500 transition-all duration-1000" style={{width: `${progress}%`}} />
+                   </div>
+                   <p className="text-[10px] text-slate-500 leading-relaxed italic">
+                     * Data refreshes automatically every 5 seconds from the production cloud.
+                   </p>
+                </div>
+             </div>
           </div>
+
         </div>
 
         {/* Action Items */}

@@ -3,7 +3,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { Package, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 
 export default function FirstRunPage() {
-  const { createInitialAdmin } = useAuth();
+  // const { createInitialAdmin } = useAuth();
+  const createInitialAdmin = (name: string, pin: string) => false;
   const [name, setName] = useState('');
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');

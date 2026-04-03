@@ -6,20 +6,45 @@ const API_ENDPOINT = '/api/mongo';
  * Executes a request against the HRMSCore MongoDB serverless API.
  */
 async function callMongoClient(action: string, collection: string, payload: any = {}): Promise<any> {
-  try {
-    const response = await fetch(API_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, collection, ...payload }),
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || 'Database request failed');
-    return result;
-  } catch (err: any) {
-    console.error(`[DB Error ${action} on ${collection}]:`, err.message);
-    return { error: err.message };
-  }
+    // Clean payload: Remove sensitive/frontend fields from document if it's an upsert/insert
+    if (payload.document) {
+        const { _id, mongoSynced, ...cleanDoc } = payload.document;
+        payload.document = cleanDoc;
+    }
+    
+    // Clean many documents
+    if (payload.documents && Array.isArray(payload.documents)) {
+        payload.documents = payload.documents.map((doc: any) => {
+            const { _id, mongoSynced, ...clean } = doc;
+            return clean;
+        });
+    }
+
+    try {
+        const response = await fetch(API_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action, collection, ...payload }),
+            signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+        const result = await response.json();
+        
+        if (!response.ok) {
+            console.error(`[DB ERROR ${action} on ${collection}]:`, result.error || 'Request failed');
+            throw new Error(result.error || `Database ${action} failed`);
+        }
+        
+        return result;
+    } catch (err: any) {
+        clearTimeout(timeoutId);
+        const msg = err.name === 'AbortError' ? `Connection timeout (${action} on ${collection})` : err.message;
+        throw new Error(msg);
+    }
 }
 
 /**
@@ -46,8 +71,17 @@ export const db = {
     });
   },
 
+  async saveMany(collection: string, documents: any[]) {
+    if (!documents?.length) return;
+    return callMongoClient('insertMany', collection, { documents });
+  },
+
   async delete(collection: string, id: string) {
     return callMongoClient('deleteOne', collection, { filter: { id } });
+  },
+
+  async request(action: string, collection: string, payload: any = {}) {
+    return callMongoClient(action, collection, payload);
   },
 
   /** ── Users ── */
@@ -96,4 +130,40 @@ export const db = {
     getSettings: (tenantId: string) => callMongoClient('findOne', 'app_settings', { filter: { tenantId } }).then(r => r.document),
     saveSettings: (tenantId: string, settings: any) => callMongoClient('upsertOne', 'app_settings', { filter: { tenantId }, document: { ...settings, tenantId } }),
   },
+
+  /** ── Synchronization Engine ── */
+  sync: {
+    async fromLocal(tenantId: string) {
+      const keys = {
+        'users': 'tys_hrms_users',
+        'products': 'tys_hrms_products',
+        'assignments': 'tys_hrms_assignments',
+        'attendance': 'tys_hrms_attendance',
+        'worklogs': 'tys_hrms_worklogs',
+        'crm_leads': 'tys_crm_leads',
+        'crm_orders': 'tys_crm_orders'
+      };
+
+      let migratedCount = 0;
+      for (const [collection, localKey] of Object.entries(keys)) {
+        try {
+          const stored = localStorage.getItem(localKey);
+          if (stored) {
+            const items = JSON.parse(stored);
+            if (Array.isArray(items) && items.length > 0) {
+              const withTenant = items.map(item => ({ ...item, tenantId }));
+              const res = await callMongoClient('insertMany', collection, { documents: withTenant });
+              if (!res.error) {
+                localStorage.removeItem(localKey);
+                migratedCount += items.length;
+              }
+            }
+          }
+        } catch (e) {
+          console.error(`[Sync] Failed for ${collection}:`, e);
+        }
+      }
+      return migratedCount;
+    }
+  }
 };

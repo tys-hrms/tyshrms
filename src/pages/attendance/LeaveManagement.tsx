@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useApp } from '../../contexts/AppContext';
 import { useSettings } from '../../contexts/SettingsContext';
-import { LeaveType, LeaveLog, User } from '../../types';
+import { LeaveType, LeaveLog, User, LeaveStatus } from '../../types';
 import { NotifyService } from '../../lib/NotifyService';
 import { 
   Plus, CheckCircle2, XCircle, Clock, Calendar, 
@@ -70,14 +70,27 @@ export default function LeaveManagement() {
   const handleRespond = async (leave: LeaveLog, status: 'approved' | 'rejected') => {
     if (!currentUser) return;
     
+    let nextStatus: LeaveStatus = status;
+    
+    if (status === 'approved') {
+       if (leave.status === 'pending_manager' && isSysAdmin) {
+          // Admin can override manager or final approve
+          nextStatus = 'approved';
+       } else if (leave.status === 'pending_manager' && isManager) {
+          nextStatus = 'pending_admin';
+       } else if (leave.status === 'pending_admin' && isSysAdmin) {
+          nextStatus = 'approved';
+       }
+    }
+
     // Core state update
-    respondToLeave(leave.id, status, currentUser.id);
+    respondToLeave(leave.id, nextStatus, currentUser.id);
 
     // Automated Communication Layer
     const worker = users.find(u => u.id === leave.userId);
-    if (worker && settings.leaveAutomation.enabled) {
+    if (worker && settings.leaveAutomation.enabled && nextStatus === 'approved') {
       setTimeout(() => {
-        NotifyService.notifyLeaveResponse(settings.leaveAutomation, worker, leave, currentUser, status);
+        NotifyService.notifyLeaveResponse(settings.leaveAutomation, worker, leave, currentUser, 'approved');
       }, 500);
     }
 
@@ -88,6 +101,11 @@ export default function LeaveManagement() {
     e.preventDefault();
     if (!startDate || !reason || !currentUser) return;
 
+    let initialStatus: LeaveStatus = 'pending';
+    if (currentUser.role === 'Worker') initialStatus = 'pending_manager';
+    else if (currentUser.role === 'Manager') initialStatus = 'pending_admin';
+    else if (currentUser.role === 'Admin') initialStatus = 'approved';
+
     requestLeave({
       userId: currentUser.id,
       date: startDate,
@@ -95,7 +113,8 @@ export default function LeaveManagement() {
       totalDays: calculatedDays,
       type,
       reason,
-      status: 'pending'
+      status: initialStatus,
+      medicalCertificateUrl: type === 'medical' ? (e.currentTarget as any).medicalUrl?.value || '' : undefined
     } as any);
 
     setIsRequesting(false);
@@ -194,9 +213,21 @@ export default function LeaveManagement() {
                 <option value="casual">Casual Leave</option>
                 <option value="sick">Sick Leave</option>
                 <option value="annual">Annual Leave</option>
+                <option value="medical">Medical Leave (Cert Req)</option>
                 <option value="unpaid">Loss of Pay</option>
               </select>
             </div>
+            {type === 'medical' && (
+               <div className="md:col-span-3 space-y-2 animate-in slide-in-from-left-2 duration-300">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Medical Certificate Link (URL / Cloud Storage)</label>
+                  <input 
+                    name="medicalUrl"
+                    type="url"
+                    placeholder="https://cloud.storage/certificate.pdf"
+                    className="w-full bg-slate-950 border border-emerald-500/30 rounded-2xl px-5 py-3.5 text-white focus:border-emerald-500 outline-none transition-all"
+                  />
+               </div>
+            )}
             <div className="md:col-span-3 space-y-2">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Reason / Note</label>
               <textarea required value={reason} onChange={e => setReason(e.target.value)} rows={2} placeholder="Briefly explain your absence..." className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-5 py-4 text-white focus:border-custom-blue outline-none resize-none transition-all" />
@@ -375,23 +406,23 @@ export default function LeaveManagement() {
                             <CheckCircle2 className="w-3.5 h-3.5" /> Approved
                           </span>
                           {leave.reviewedBy && (
-                            <span className="text-[9px] text-slate-600 font-bold uppercase">by {getUserName(leave.reviewedBy)}</span>
+                            <span className="text-[9px] text-slate-600 font-bold uppercase">final by {getUserName(leave.reviewedBy)}</span>
                           )}
                         </div>
                       )}
                       {leave.status === 'rejected' && (
-                        <div className="flex flex-col gap-1">
-                          <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest flex items-center gap-1.5">
-                            <XCircle className="w-3.5 h-3.5" /> Denied
-                          </span>
-                          {leave.reviewedBy && (
-                            <span className="text-[9px] text-slate-600 font-bold uppercase">by {getUserName(leave.reviewedBy)}</span>
-                          )}
-                        </div>
+                        <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest flex items-center gap-1.5">
+                          <XCircle className="w-3.5 h-3.5" /> Denied
+                        </span>
                       )}
-                      {leave.status === 'pending' && (
-                        <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-1.5 animate-pulse">
-                          <Clock className="w-3.5 h-3.5" /> Awaiting Review
+                      {leave.status === 'pending_manager' && (
+                        <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5" /> Pending Manager
+                        </span>
+                      )}
+                      {leave.status === 'pending_admin' && (
+                        <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest flex items-center gap-1.5">
+                          <ShieldCheck className="w-3.5 h-3.5" /> Pending Admin
                         </span>
                       )}
                     </td>

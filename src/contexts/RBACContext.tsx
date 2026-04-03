@@ -3,12 +3,11 @@ import { UserRole, AppModule, PermissionAction, RolePermission, PermissionScope 
 import { db } from '../lib/database';
 import { useSettings } from './SettingsContext';
 
-const STORAGE_KEY = 'tys_hrms_rbac_v3';
 
 // Default permissions matrix using scopes
 const DEFAULT_PERMISSIONS: RolePermission[] = [
   // Admin — full access to everything
-  ...(['dashboard','users','products','assignments','attendance','leaves','settings','rbac','reports'] as AppModule[]).map(mod => ({
+  ...(['dashboard','users','products','assignments','attendance','leaves','settings','rbac','reports','crm','payroll'] as AppModule[]).map(mod => ({
     role: 'Admin' as UserRole, module: mod,
     viewScope: 'global' as PermissionScope, createScope: 'global' as PermissionScope, editScope: 'global' as PermissionScope, deleteScope: 'global' as PermissionScope,
     features: { biometricAllowed: true }
@@ -27,6 +26,8 @@ const DEFAULT_PERMISSIONS: RolePermission[] = [
   { role: 'Manager', module: 'settings', viewScope: 'location', createScope: 'none', editScope: 'none', deleteScope: 'none' },
   { role: 'Manager', module: 'rbac', viewScope: 'none', createScope: 'none', editScope: 'none', deleteScope: 'none' },
   { role: 'Manager', module: 'reports', viewScope: 'location', createScope: 'none', editScope: 'none', deleteScope: 'none' },
+  { role: 'Manager', module: 'crm', viewScope: 'location', createScope: 'location', editScope: 'location', deleteScope: 'none' },
+  { role: 'Manager', module: 'payroll', viewScope: 'location', createScope: 'none', editScope: 'none', deleteScope: 'none' },
 
   // Worker — own data only
   { 
@@ -42,36 +43,35 @@ const DEFAULT_PERMISSIONS: RolePermission[] = [
   { role: 'Worker', module: 'settings', viewScope: 'none', createScope: 'none', editScope: 'none', deleteScope: 'none' },
   { role: 'Worker', module: 'rbac', viewScope: 'none', createScope: 'none', editScope: 'none', deleteScope: 'none' },
   { role: 'Worker', module: 'reports', viewScope: 'none', createScope: 'none', editScope: 'none', deleteScope: 'none' },
+  { role: 'Worker', module: 'crm', viewScope: 'none', createScope: 'none', editScope: 'none', deleteScope: 'none' },
+  { role: 'Worker', module: 'payroll', viewScope: 'none', createScope: 'none', editScope: 'none', deleteScope: 'none' },
 ];
 
 interface RBACContextType {
   permissions: RolePermission[];
   isLoading: boolean;
+  isSaving: boolean;
   can: (role: UserRole, module: AppModule, action: PermissionAction, targetLocationId?: string, userLocationId?: string) => boolean;
   updatePermission: (role: UserRole, module: AppModule, action: PermissionAction, value: PermissionScope) => void;
-  toggleFeature: (role: UserRole, feature: 'biometricAllowed', value: boolean) => void;
+  toggleFeature: (role: UserRole, feature: keyof NonNullable<RolePermission['features']>, value: boolean) => void;
+  saveAllToCloud: () => Promise<void>;
   resetToDefaults: () => void;
   getPermissionsForRole: (role: UserRole) => RolePermission[];
+  getAvailableRoles: () => string[];
+  addRole: (role: string) => void;
+  deleteRole: (role: string) => void;
+  renameRole: (oldName: string, newName: string) => void;
+  hasFeature: (role: UserRole, feature: keyof NonNullable<RolePermission['features']>) => boolean;
 }
 
 const RBACContext = createContext<RBACContextType | undefined>(undefined);
 
 export function RBACProvider({ children }: { children: ReactNode }) {
   const { settings } = useSettings();
-  const [permissions, setPermissions] = useState<RolePermission[]>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      return stored ? JSON.parse(stored) : DEFAULT_PERMISSIONS;
-    } catch { return DEFAULT_PERMISSIONS; }
-  });
-
+  const [permissions, setPermissions] = useState<RolePermission[]>(DEFAULT_PERMISSIONS);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(permissions));
-  }, [permissions]);
-
-  // --- Cloud Sync: Initial Load ---
   useEffect(() => {
     if (!settings.mongodb.isEnabled) {
       setIsLoading(false);
@@ -79,26 +79,32 @@ export function RBACProvider({ children }: { children: ReactNode }) {
     }
 
     const loadCloudRBAC = async () => {
-      console.log('[CloudSync] Loading RBAC matrix from MongoDB...');
-      const timeout = setTimeout(() => {
-        setIsLoading(false);
-      }, 5000);
-
       try {
         const cPermissions = await db.getAll<RolePermission>('rbac_permissions');
-        if (cPermissions.length) setPermissions(cPermissions);
+        if (cPermissions.length) {
+          setPermissions(prev => {
+            const merged = [...prev];
+            cPermissions.forEach(cp => {
+              const idx = merged.findIndex(p => p.role === cp.role && p.module === cp.module);
+              if (idx !== -1) merged[idx] = cp;
+              else merged.push(cp);
+            });
+            return merged;
+          });
+        }
       } catch (e) {
-        console.error('[CloudSync] Failed to load RBAC from cloud:', e);
+        console.error('[CloudSync] Failed to load RBAC:', e);
       } finally {
-        clearTimeout(timeout);
         setIsLoading(false);
       }
     };
-
     loadCloudRBAC();
   }, [settings.mongodb.isEnabled]);
 
   const can = (role: UserRole, module: AppModule, action: PermissionAction, targetLocationId?: string, userLocationId?: string): boolean => {
+    // Admin always has module bypass
+    if (role === 'Admin') return true;
+
     const perm = permissions.find(p => p.role === role && p.module === module);
     if (!perm) return false;
     
@@ -112,14 +118,21 @@ export function RBACProvider({ children }: { children: ReactNode }) {
 
     if (scope === 'none') return false;
     if (scope === 'global') return true;
-    
-    // scope === 'location'
-    if (!targetLocationId || !userLocationId) {
-      // General check (e.g. for showing a menu item)
-      return true;
-    }
-    
+    if (!targetLocationId || !userLocationId) return true;
     return targetLocationId === userLocationId;
+  };
+  
+  const hasFeature = (role: UserRole, feature: keyof NonNullable<RolePermission['features']>): boolean => {
+    // For features, we check matrix even for Admins
+    const defaultFeatures = {
+      biometricAllowed: true,
+      systemPrintAllowed: true,
+      aiAssistantAllowed: true,
+      calculatorAllowed: true
+    };
+    const rolePermissions = permissions.filter(p => p.role === role);
+    if (!rolePermissions.length) return defaultFeatures[feature] ?? false;
+    return rolePermissions.some(p => p.features?.[feature] === true);
   };
 
   const updatePermission = (role: UserRole, module: AppModule, action: PermissionAction, value: PermissionScope) => {
@@ -142,42 +155,72 @@ export function RBACProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const toggleFeature = (role: UserRole, feature: 'biometricAllowed', value: boolean) => {
+  const toggleFeature = (role: UserRole, feature: keyof NonNullable<RolePermission['features']>, value: boolean) => {
     setPermissions(prev => {
       const next = prev.map(p => {
         if (p.role !== role) return p;
-        return {
-          ...p,
-          features: {
-            ...p.features,
-            [feature]: value
-          }
-        };
+        return { ...p, features: { ...p.features, [feature]: value } };
       });
-      
       if (settings.mongodb.isEnabled) {
-        // Since features are copied across all permissions of a role, 
-        // we must save ALL permissions for this role to cloud.
-        const rolePermissions = next.filter(p => p.role === role);
-        db.saveMany('rbac_permissions', rolePermissions.map(p => ({ ...p, id: `${p.role}_${p.module}` })));
+        next.filter(p => p.role === role).forEach(p => db.save('rbac_permissions', { ...p, id: `${p.role}_${p.module}` }));
       }
-      
       return next;
     });
   };
 
-  const resetToDefaults = () => setPermissions(DEFAULT_PERMISSIONS);
+  const saveAllToCloud = async () => {
+    if (!settings.mongodb.isEnabled) return;
+    setIsSaving(true);
+    try {
+      await Promise.all(permissions.map(p => db.save('rbac_permissions', { ...p, id: `${p.role}_${p.module}` })));
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
+  const resetToDefaults = () => setPermissions(DEFAULT_PERMISSIONS);
   const getPermissionsForRole = (role: UserRole) => permissions.filter(p => p.role === role);
+  const getAvailableRoles = () => Array.from(new Set(['Admin', 'Manager', 'Worker', ...permissions.map(p => p.role)]));
+
+  const addRole = (roleName: string) => {
+    if (getAvailableRoles().includes(roleName)) return;
+    const newPerms: RolePermission[] = ['dashboard','users','products','assignments','attendance','leaves','settings','rbac','reports','crm','payroll'].map(mod => ({
+      role: roleName as UserRole, module: mod as AppModule,
+      viewScope: 'none', createScope: 'none', editScope: 'none', deleteScope: 'none',
+      features: {}
+    }));
+    setPermissions(prev => [...prev, ...newPerms]);
+    if (settings.mongodb.isEnabled) db.saveMany('rbac_permissions', newPerms.map(p => ({ ...p, id: `${p.role}_${p.module}` })));
+  };
+
+  const deleteRole = (role: string) => {
+    if (['Admin', 'Manager', 'Worker'].includes(role)) return;
+    setPermissions(prev => prev.filter(p => p.role !== role));
+  };
+
+  const renameRole = (oldName: string, newName: string) => {
+    if (['Admin', 'Manager', 'Worker'].includes(oldName)) return;
+    setPermissions(prev => {
+      const next = prev.map(p => p.role === oldName ? { ...p, role: newName as UserRole } : p);
+      if (settings.mongodb.isEnabled) {
+        next.filter(p => p.role === newName).forEach(p => db.save('rbac_permissions', { ...p, id: `${p.role}_${p.module}` }));
+      }
+      return next;
+    });
+  };
 
   return (
-    <RBACContext.Provider value={{ permissions, isLoading, can, updatePermission, toggleFeature, resetToDefaults, getPermissionsForRole }}>
+    <RBACContext.Provider value={{ 
+      permissions, isLoading, isSaving, can, updatePermission, toggleFeature, 
+      saveAllToCloud, resetToDefaults, getPermissionsForRole, getAvailableRoles, 
+      addRole, deleteRole, renameRole, hasFeature 
+    }}>
       {children}
     </RBACContext.Provider>
   );
 }
 
-export function useRBAC(): RBACContextType {
+export function useRBAC() {
   const ctx = useContext(RBACContext);
   if (!ctx) throw new Error('useRBAC must be used within RBACProvider');
   return ctx;

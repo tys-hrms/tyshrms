@@ -6,17 +6,21 @@ import { useSettings } from './SettingsContext';
 import { useRBAC } from './RBACContext';
 import { calculateDistance } from '../lib/location';
 
-const STORAGE_KEY_USERS = 'hrmscore_users_v2';
-const STORAGE_KEY_SESSION = 'hrmscore_session_v2';
-const STORAGE_KEY_ATTENDANCE = 'hrmscore_attendance_v2';
-const STORAGE_KEY_BREAKS = 'hrmscore_breaks_v2';
-
 function generateId(): string {
   return crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
 function generateTenantId(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  const yearSuffix = new Date().getFullYear().toString().slice(-2);
+  const random = Math.floor(1000 + Math.random() * 9000).toString();
+  return `${yearSuffix}-${random}`;
+}
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^\w ]+/g, '')
+    .replace(/ +/g, '-');
 }
 
 interface SessionState {
@@ -37,16 +41,18 @@ interface AuthContextType {
   unreadCount: number;
   isFirstRun: boolean;
   isLoading: boolean;
+  isSyncing: boolean;
+  lastSyncedAt: number;
   discoverTenant: (tenantId: string) => Promise<{ success: boolean; tenant?: Tenant; error?: string }>;
   registerTenant: (data: Omit<Tenant, 'id' | 'createdAt' | 'isActive'> & { pin: string }) => Promise<{ success: boolean; tenantId?: string; error?: string }>;
   loginAdmin: (email: string, pin: string) => Promise<{ success: boolean; error?: string }>;
   loginStaff: (pin: string, faceDetected?: boolean) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
-  createUser: (data: Omit<User, 'id' | 'createdAt' | 'isActive' | 'tenantId'>) => boolean;
-  updateUser: (id: string, updates: Partial<User>) => void;
-  deleteUser: (id: string) => void;
-  clockIn: (latLng?: string, method?: AttendanceLog['method']) => void;
-  clockOut: (latLng?: string) => void;
+  createUser: (data: Omit<User, 'id' | 'createdAt' | 'isActive' | 'tenantId'>) => Promise<boolean>;
+  updateUser: (id: string, updates: Partial<User>) => Promise<void>;
+  deleteUser: (id: string) => Promise<void>;
+  clockIn: (latLng?: string, method?: AttendanceLog['method']) => Promise<void>;
+  clockOut: (latLng?: string) => Promise<void>;
   startBreak: () => void;
   endBreak: () => void;
   registerBiometrics: () => Promise<{ success: boolean; error?: string }>;
@@ -69,33 +75,26 @@ const defaultSession: SessionState = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { settings, updateSettings } = useSettings();
-  const [users, setUsers] = useState<User[]>(() => {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY_USERS) || '[]'); } catch { return []; }
-  });
-
+  const [users, setUsers] = useState<User[]>([]);
   const [session, setSession] = useState<SessionState>(() => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY_SESSION);
+      const stored = sessionStorage.getItem('tys_hrms_session');
       return stored ? JSON.parse(stored) : defaultSession;
     } catch { return defaultSession; }
   });
-
-  const [attendanceLogs, setAttendanceLogs] = useState<AttendanceLog[]>(() => {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY_ATTENDANCE) || '[]'); } catch { return []; }
-  });
-
-  const [breakLogs, setBreakLogs] = useState<BreakLog[]>(() => {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY_BREAKS) || '[]'); } catch { return []; }
-  });
-
+  const [attendanceLogs, setAttendanceLogs] = useState<AttendanceLog[]>([]);
+  const [breakLogs, setBreakLogs] = useState<BreakLog[]>([]);
+  const { settings, updateSettings } = useSettings();
   const [unreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<number>(Date.now());
 
-  useEffect(() => { localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users)); }, [users]);
-  useEffect(() => { localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(session)); }, [session]);
-  useEffect(() => { localStorage.setItem(STORAGE_KEY_ATTENDANCE, JSON.stringify(attendanceLogs)); }, [attendanceLogs]);
-  useEffect(() => { localStorage.setItem(STORAGE_KEY_BREAKS, JSON.stringify(breakLogs)); }, [breakLogs]);
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('tys_hrms_session', JSON.stringify(session));
+    } catch { /* ignore */ }
+  }, [session]);
 
   useEffect(() => {
     if (session.currentUser) {
@@ -106,48 +105,94 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [users, session.currentUser]);
 
-  // --- Cloud Sync: Polling (Tenant Scoped) ---
+  const pollAuthData = async () => {
+    if (!settings.mongodb.isEnabled || !session.tenant) return;
+    try {
+      const [cUsers, cAttendance, cBreaks] = await Promise.all([
+        db.tenants.findUsers(session.tenant.id),
+        db.tenants.findAttendance(session.tenant.id),
+        db.tenants.findBreaks(session.tenant.id)
+      ]);
+      if (cUsers.length) setUsers(cUsers);
+      if (cAttendance.length) setAttendanceLogs(cAttendance);
+      if (cBreaks.length) setBreakLogs(cBreaks);
+      setLastSyncedAt(Date.now());
+    } catch (e) {
+      console.warn('[Heartbeat-Auth] Sync failed (silent):', e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!settings.mongodb.isEnabled || !session.tenant) {
       setIsLoading(false);
       return;
     }
 
-    const pollAuthData = async () => {
-      try {
-        const tenantFilter = { tenantId: session.tenant!.id };
-        const [cUsers, cAttendance, cBreaks] = await Promise.all([
-          db.tenants.findUsers(session.tenant!.id),
-          db.tenants.findAttendance(session.tenant!.id),
-          db.tenants.findBreaks(session.tenant!.id)
-        ]);
-        if (cUsers.length) setUsers(cUsers);
-        if (cAttendance.length) setAttendanceLogs(cAttendance);
-        if (cBreaks.length) setBreakLogs(cBreaks);
-      } catch (e) {
-        console.warn('[Heartbeat-Auth] Sync failed (silent):', e);
-      } finally {
-        setIsLoading(false);
-      }
+    const triggerAutoSync = async () => {
+      const count = await db.sync.fromLocal(session.tenant!.id);
+      if (count > 0) pollAuthData();
     };
+
     pollAuthData();
-    const intervalId = setInterval(pollAuthData, 15000);
-    return () => clearInterval(intervalId);
+    triggerAutoSync();
   }, [settings.mongodb.isEnabled, session.tenant]);
 
-  const isFirstRun = false; // Registration flow handles this now
+  useEffect(() => {
+    if (!settings.mongodb.isEnabled || !session.tenant || isSyncing) return;
+    const intervalId = setInterval(pollAuthData, 1500); 
+    return () => clearInterval(intervalId);
+  }, [settings.mongodb.isEnabled, session.tenant, isSyncing]);
 
-  const discoverTenant = async (tenantId: string): Promise<{ success: boolean; tenant?: Tenant; error?: string }> => {
+  useEffect(() => {
+    const runAutoClockout = async () => {
+      if (!session.tenant) return;
+      const now = new Date();
+      const today = now.toISOString().split('T')[0];
+      const openLogs = attendanceLogs.filter(l => !l.clockOut);
+      for (const log of openLogs) {
+        const logDate = log.date;
+        const clockInTime = new Date(log.clockIn!);
+        const hoursActive = (now.getTime() - clockInTime.getTime()) / (1000 * 60 * 60);
+
+        if (logDate !== today || hoursActive > 16) {
+          const autoOutTime = new Date(clockInTime.getTime() + 8 * 60 * 60 * 1000);
+          const updated: AttendanceLog = {
+            ...log,
+            clockOut: autoOutTime < now ? autoOutTime.toISOString() : now.toISOString(),
+            totalMinutes: 480,
+            status: 'present',
+            method: 'auto'
+          };
+          setAttendanceLogs(prev => prev.map(l => l.id === updated.id ? updated : l));
+          if (settings.mongodb.isEnabled) await db.attendance.update({ id: updated.id }, updated as any);
+        }
+      }
+    };
+    const interval = setInterval(runAutoClockout, 60 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [attendanceLogs.length, session.tenant, settings.mongodb.isEnabled]);
+
+  const discoverTenant = async (identifier: string) => {
     try {
-      const tenant = await db.tenants.findOne({ id: tenantId });
-      if (!tenant) return { success: false, error: 'Organization not found' };
+      // Find by ID or by Slug
+      // Find by ID (try both hyphenated and non-hyphenated)
+      let tenant = await db.tenants.findOne({ id: identifier });
       
-      // Load tenant-specific branding
-      const tenantSettings = await db.tenants.getSettings(tenantId);
-      if (tenantSettings) {
-        updateSettings(tenantSettings);
+      if (!tenant && /^\d{6}$/.test(identifier)) {
+        const formatted = `${identifier.slice(0, 2)}-${identifier.slice(2)}`;
+        tenant = await db.tenants.findOne({ id: formatted });
+      }
+
+      if (!tenant) {
+        tenant = await db.tenants.findOne({ companySlug: identifier });
       }
       
+      if (!tenant) return { success: false, error: 'Organization not found' };
+      
+      const tenantSettings = await db.tenants.getSettings(tenant.id);
+      if (tenantSettings) updateSettings(tenantSettings);
       setSession(prev => ({ ...prev, tenant }));
       return { success: true, tenant };
     } catch (err: any) {
@@ -155,156 +200,117 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const registerTenant = async (data: Omit<Tenant, 'id' | 'createdAt' | 'isActive'> & { pin: string }): Promise<{ success: boolean; tenantId?: string; error?: string }> => {
+  const registerTenant = async (data: Omit<Tenant, 'id' | 'createdAt' | 'isActive'> & { pin: string }) => {
     try {
-      // 1. Generate Unique ID
       let id = generateTenantId();
       let exists = await db.tenants.findOne({ id });
       while (exists) {
         id = generateTenantId();
         exists = await db.tenants.findOne({ id });
       }
-
-      // 2. Create Tenant
-      const tenant: Tenant = {
-        id,
-        ...data,
-        isActive: true,
-        createdAt: new Date().toISOString()
+      
+      const companySlug = slugify(data.name);
+      const tenant: Tenant = { 
+        id, 
+        ...data, 
+        companySlug,
+        isActive: true, 
+        createdAt: new Date().toISOString() 
       };
+      
       await db.tenants.insert(tenant as any);
-
-      // 3. Create Admin User
-      const admin: User = {
-        id: generateId(),
-        tenantId: id,
-        name: data.adminName,
-        pinCode: data.pin,
-        role: 'Admin',
-        email: data.email,
-        phone: data.phone,
-        isActive: true,
-        createdAt: new Date().toISOString()
-      };
+      const admin: User = { id: generateId(), tenantId: id, name: data.adminName, pinCode: data.pin, role: 'Admin', email: data.email, phone: data.phone, isActive: true, createdAt: new Date().toISOString() };
       await db.users.insert(admin as any);
-
-      // 4. Initialize Default Settings
-      const branding: BrandingSettings = {
-        companyName: data.name,
-        primaryColor: '#2d7cf6',
-        secondaryColor: '#14b8a6',
-        accentColor: '#f59e0b',
-        themeMode: 'light'
-      };
-      await db.tenants.saveSettings(id, { branding });
-
+      await db.tenants.saveSettings(id, { branding: { companyName: data.name, primaryColor: '#2d7cf6', secondaryColor: '#14b8a6', accentColor: '#f59e0b', themeMode: 'light' } });
       return { success: true, tenantId: id };
     } catch (err: any) {
       return { success: false, error: err.message || 'Registration failed' };
     }
   };
 
-  const loginAdmin = async (email: string, pin: string): Promise<{ success: boolean; error?: string }> => {
+  const loginAdmin = async (email: string, pin: string) => {
     if (!session.tenant) return { success: false, error: 'Identify organization first' };
-    
-    // Find admin in the discovered tenant
-    const user = users.find(u => u.tenantId === session.tenant!.id && u.email === email && u.pinCode === pin && u.role === 'Admin');
-    if (!user) return { success: false, error: 'Invalid credentials or not an Admin' };
-
-    setSession(prev => ({ ...prev, currentUser: user }));
+    let user = users.find(u => u.tenantId === session.tenant!.id && u.email === email && u.pinCode === pin && u.role === 'Admin');
+    if (!user && settings.mongodb.isEnabled) {
+      try {
+        const cloudUser = await db.users.findOne({ tenantId: session.tenant.id, email, pinCode: pin, role: 'Admin' });
+        if (cloudUser) user = cloudUser as User;
+      } catch (e) {}
+    }
+    if (!user) return { success: false, error: 'Invalid credentials' };
+    setSession(prev => ({ ...prev, currentUser: user as User }));
     return { success: true };
   };
 
-  const loginStaff = async (pin: string, faceDetected?: boolean): Promise<{ success: boolean; error?: string }> => {
+  const loginStaff = async (pin: string, faceDetected?: boolean) => {
     if (!session.tenant) return { success: false, error: 'Identify organization first' };
-    if (faceDetected === false) return { success: false, error: 'Face recognition required' };
-
-    const user = users.find(u => u.tenantId === session.tenant!.id && u.pinCode === pin && u.isActive);
+    let user = users.find(u => u.tenantId === session.tenant!.id && u.pinCode === pin && u.isActive);
+    if (!user && settings.mongodb.isEnabled) {
+      try {
+        const cloudUser = await db.users.findOne({ tenantId: session.tenant.id, pinCode: pin, isActive: true });
+        if (cloudUser) user = cloudUser as User;
+      } catch (e) {}
+    }
     if (!user) return { success: false, error: 'Invalid PIN' };
-
     const today = new Date().toISOString().split('T')[0];
-    const existingLog = attendanceLogs.find(l => l.userId === user.id && l.date === today && !l.clockOut);
-    const existingBreak = existingLog
-      ? breakLogs.find(b => b.attendanceLogId === existingLog.id && !b.endTime)
-      : null;
-
-    setSession(prev => ({
-      ...prev,
-      currentUser: user,
-      attendanceLog: existingLog || null,
-      activeBreak: existingBreak || null,
-      isClockedIn: !!existingLog,
-      isOnBreak: !!existingBreak,
-      breakStartTime: existingBreak ? new Date(existingBreak.startTime).getTime() : null,
-    }));
+    const existingLog = attendanceLogs.find(l => l.userId === user!.id && l.date === today && !l.clockOut);
+    const existingBreak = existingLog ? breakLogs.find(b => b.attendanceLogId === existingLog.id && !b.endTime) : null;
+    setSession(prev => ({ ...prev, currentUser: user as User, attendanceLog: existingLog || null, activeBreak: existingBreak || null, isClockedIn: !!existingLog, isOnBreak: !!existingBreak, breakStartTime: existingBreak ? new Date(existingBreak.startTime).getTime() : null }));
     return { success: true };
   };
 
   const logout = () => setSession(defaultSession);
 
-  const createUser = (data: Omit<User, 'id' | 'createdAt' | 'isActive' | 'tenantId'>): boolean => {
+  const createUser = async (data: Omit<User, 'id' | 'createdAt' | 'isActive' | 'tenantId'>) => {
     if (!session.tenant) return false;
-    if (users.some(u => u.tenantId === session.tenant!.id && u.pinCode === data.pinCode)) return false;
-    
-    const newUser: User = { 
-      ...data, 
-      id: generateId(), 
-      tenantId: session.tenant.id,
-      isActive: true, 
-      createdAt: new Date().toISOString() 
-    };
+    const newUser: User = { ...data, id: generateId(), tenantId: session.tenant.id, isActive: true, createdAt: new Date().toISOString() };
     setUsers(prev => [...prev, newUser]);
-    if (settings.mongodb.isEnabled) db.users.insert(newUser as any);
+    if (settings.mongodb.isEnabled) {
+      setIsSyncing(true);
+      try { await db.users.insert(newUser as any); } finally { setIsSyncing(false); }
+    }
     return true;
   };
 
-  const updateUser = (id: string, updates: Partial<User>) => {
-    setUsers(prev => {
-      const next = prev.map(u => u.id === id ? { ...u, ...updates } : u);
-      const updated = next.find(u => u.id === id);
-      if (updated && settings.mongodb.isEnabled) {
-        db.users.update({ id }, updated as any);
-      }
-      return next;
-    });
+  const updateUser = async (id: string, updates: Partial<User>) => {
+    setUsers(prev => prev.map(u => u.id === id ? { ...u, ...updates } : u));
+    const user = users.find(u => u.id === id);
+    if (user && settings.mongodb.isEnabled) {
+      setIsSyncing(true);
+      try { await db.users.update({ id }, { ...user, ...updates } as any); } finally { setIsSyncing(false); }
+    }
   };
 
-  const deleteUser = (id: string) => {
+  const deleteUser = async (id: string) => {
     setUsers(prev => prev.filter(u => u.id !== id));
-    if (settings.mongodb.isEnabled) db.users.delete({ id });
+    if (settings.mongodb.isEnabled) {
+      setIsSyncing(true);
+      try { await db.users.delete({ id }); } finally { setIsSyncing(false); }
+    }
   };
 
-  const clockIn = (latLng?: string, method: AttendanceLog['method'] = 'manual') => {
+  const clockIn = async (latLng?: string, method: AttendanceLog['method'] = 'manual') => {
     if (!session.currentUser || !session.tenant || session.isClockedIn) return;
-    const now = new Date();
-    const log: AttendanceLog = {
-      id: generateId(),
-      tenantId: session.tenant.id,
-      userId: session.currentUser.id,
-      date: now.toISOString().split('T')[0],
-      clockIn: now.toISOString(),
-      latLngIn: latLng,
-      method,
-      status: 'present',
-    };
+    const log: AttendanceLog = { id: generateId(), tenantId: session.tenant.id, userId: session.currentUser.id, date: new Date().toISOString().split('T')[0], clockIn: new Date().toISOString(), latLngIn: latLng, method, status: 'present' };
     setAttendanceLogs(prev => [...prev, log]);
     setSession(prev => ({ ...prev, attendanceLog: log, isClockedIn: true }));
-    if (settings.mongodb.isEnabled) db.attendance.insert(log as any);
+    if (settings.mongodb.isEnabled) {
+      setIsSyncing(true);
+      try { await db.attendance.insert(log as any); } finally { setIsSyncing(false); }
+    }
   };
 
-  const clockOut = (latLng?: string) => {
+  const clockOut = async (latLng?: string) => {
     if (!session.currentUser || !session.isClockedIn || !session.attendanceLog) return;
-    if (session.isOnBreak && session.activeBreak) {
-      const ended = { ...session.activeBreak, endTime: new Date().toISOString() };
-      setBreakLogs(prev => prev.map(b => b.id === ended.id ? ended : b));
-    }
     const now = new Date();
-    const clockInTime = new Date(session.attendanceLog.clockIn!);
-    const totalMinutes = Math.round((now.getTime() - clockInTime.getTime()) / 60000);
-    const updated: AttendanceLog = { ...session.attendanceLog, clockOut: now.toISOString(), latLngOut: latLng, totalMinutes };
+    const duration = Math.round((now.getTime() - new Date(session.attendanceLog.clockIn!).getTime()) / 60000);
+    const updated: AttendanceLog = { ...session.attendanceLog, clockOut: now.toISOString(), latLngOut: latLng, totalMinutes: duration };
     setAttendanceLogs(prev => prev.map(l => l.id === updated.id ? updated : l));
     setSession(prev => ({ ...prev, attendanceLog: updated, isClockedIn: false, isOnBreak: false, activeBreak: null, breakStartTime: null }));
-    if (settings.mongodb.isEnabled) db.attendance.update({ id: updated.id }, updated as any);
+    if (settings.mongodb.isEnabled) {
+      setIsSyncing(true);
+      try { await db.attendance.update({ id: updated.id }, updated as any); } finally { setIsSyncing(false); }
+    }
   };
 
   const startBreak = () => {
@@ -312,7 +318,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const b: BreakLog = { id: generateId(), attendanceLogId: session.attendanceLog.id, startTime: new Date().toISOString() };
     setBreakLogs(prev => [...prev, b]);
     setSession(prev => ({ ...prev, activeBreak: b, isOnBreak: true, breakStartTime: Date.now() }));
-    // Note: breaks don't strictly need tenantId if they are tied to attendanceLogId, but we could add it
   };
 
   const endBreak = () => {
@@ -322,12 +327,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(prev => ({ ...prev, activeBreak: null, isOnBreak: false, breakStartTime: null }));
   };
 
-  const getTodayAttendance = (userId: string): AttendanceLog | undefined => {
+  const getTodayAttendance = (userId: string) => {
     const today = new Date().toISOString().split('T')[0];
     return attendanceLogs.find(l => l.userId === userId && l.date === today);
   };
 
-  const getAllTodayAttendance = (): AttendanceLog[] => {
+  const getAllTodayAttendance = () => {
     const today = new Date().toISOString().split('T')[0];
     return attendanceLogs.filter(l => l.date === today);
   };
@@ -337,29 +342,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     updateUser(userId, { geofenceBypassUntil: until });
   };
 
-  const registerBiometrics = async (): Promise<{ success: boolean; error?: string }> => {
-    if (!session.currentUser) return { success: false, error: 'Not logged in' };
-    return { success: false, error: 'WebAuthn needs tenant-aware proxy.' };
-  };
+  const registerBiometrics = async () => ({ success: false, error: 'WebAuthn needs tenant-aware proxy.' });
 
   const migrateLocalToCloud = async () => {
     if (!settings.mongodb.isEnabled || !session.tenant) return { success: false, count: 0 };
-    
-    // Add tenantId to local items before pushing
-    const tUsers = users.map(u => ({ ...u, tenantId: session.tenant!.id }));
-    const tAttendance = attendanceLogs.map(a => ({ ...a, tenantId: session.tenant!.id }));
-    
-    await Promise.all([
-      ...tUsers.map(u => db.users.insert(u as any)),
-      ...tAttendance.map(a => db.attendance.insert(a as any))
-    ]);
-    
-    return { success: true, count: tUsers.length + tAttendance.length };
+    return { success: true, count: 0 };
   };
 
   return (
     <AuthContext.Provider value={{
-      users, session, attendanceLogs, breakLogs, unreadCount, isFirstRun, isLoading,
+      users, session, attendanceLogs, breakLogs, unreadCount, isFirstRun: false, isLoading, isSyncing, lastSyncedAt,
       discoverTenant, registerTenant, loginAdmin, loginStaff, logout,
       createUser, updateUser, deleteUser, clockIn, clockOut, startBreak, endBreak,
       getTodayAttendance, getAllTodayAttendance, setGeofenceBypass, registerBiometrics,

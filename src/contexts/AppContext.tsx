@@ -1,11 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import {
-  Product, Assignment, WorkLog, InboundShipment, DispatchBatch, LeaveRequest, TaskDefinition, DailyStats, AssignmentCarryForward, LeaveLog, DefectReason, Notification
+  Product, Assignment, WorkLog, InboundShipment, DispatchBatch, LeaveLog, LeaveType, LeaveStatus, TaskDefinition, DailyStats, AssignmentCarryForward, DefectReason, Notification
 } from '../types';
 import { db } from '../lib/database';
 import { useSettings } from './SettingsContext';
-
-const STORAGE_PREFIX = 'tys_hrms_';
+import { useAuth } from './AuthContext';
 
 function generateId(): string {
   return crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -28,37 +27,40 @@ interface AppContextType {
   workflowNodes: any[];
   workflowEdges: any[];
   notifications: Notification[];
+  isSyncing: boolean;
+  lastSyncedAt: number;
+  isLoading: boolean;
 
-  addProduct: (product: Omit<Product, 'id' | 'createdAt'>) => void;
+  addProduct: (product: Omit<Product, 'id' | 'createdAt'>) => Promise<void>;
   addProducts: (products: Omit<Product, 'id' | 'createdAt'>[]) => Promise<void>;
-  updateProduct: (id: string, product: Partial<Product>) => void;
-  deleteProduct: (id: string) => void;
+  updateProduct: (id: string, product: Partial<Product>) => Promise<void>;
+  deleteProduct: (id: string) => Promise<void>;
   clearProducts: () => Promise<void>;
 
-  addAssignment: (data: Partial<Assignment> & { sku: string; userId: string; date: string }) => void;
-  updateAssignment: (id: string, updates: Partial<Assignment>) => void;
+  addAssignment: (data: Partial<Assignment> & { sku: string; userId: string; date: string }) => Promise<void>;
+  updateAssignment: (id: string, updates: Partial<Assignment>) => Promise<void>;
   getAssignmentsForUser: (userId: string, date: string) => Assignment[];
   clearAssignments: () => Promise<void>;
   runCarryForwardJob: () => void;
 
-  addWorkLog: (log: Partial<WorkLog> & { assignmentId: string; userId: string }) => void;
+  addWorkLog: (log: Partial<WorkLog> & { assignmentId: string; userId: string }) => Promise<void>;
 
-  addDispatchBatch: (batch: Omit<DispatchBatch, 'id' | 'packedAt'>) => void;
-  updateDispatchBatch: (id: string, updates: Partial<DispatchBatch>) => void;
+  addDispatchBatch: (batch: Omit<DispatchBatch, 'id' | 'packedAt'>) => Promise<void>;
+  updateDispatchBatch: (id: string, updates: Partial<DispatchBatch>) => Promise<void>;
 
-  requestLeave: (data: Omit<LeaveLog, 'id' | 'status'>) => void;
-  respondToLeave: (id: string, status: 'approved' | 'rejected', reviewerId?: string) => void;
+  requestLeave: (data: Omit<LeaveLog, 'id'>) => Promise<void>;
+  respondToLeave: (id: string, status: LeaveStatus, reviewerId?: string) => Promise<void>;
 
-  addTask: (task: TaskDefinition) => void;
-  updateTask: (id: string, updates: Partial<TaskDefinition>) => void;
-  deleteTask: (id: string) => void;
+  addTask: (task: TaskDefinition) => Promise<void>;
+  updateTask: (id: string, updates: Partial<TaskDefinition>) => Promise<void>;
+  deleteTask: (id: string) => Promise<void>;
 
-  setWorkflowNodes: (nodes: any[]) => void;
-  setWorkflowEdges: (edges: any[]) => void;
+  setWorkflowNodes: (nodes: any[]) => Promise<void>;
+  setWorkflowEdges: (edges: any[]) => Promise<void>;
   getDailyStats: (date?: string) => DailyStats;
 
   addNotification: (noti: Partial<Notification> & { userId: string; title: string; message: string }) => Promise<void>;
-  markNotificationRead: (id: string) => void;
+  markNotificationRead: (id: string) => Promise<void>;
   clearNotifications: () => Promise<void>;
   signalHelp: (senderId: string, assignmentId: string) => Promise<void>;
   
@@ -67,43 +69,70 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const useStorage = <T,>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] => {
-  const [state, setState] = useState<T>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_PREFIX + key);
-      return stored ? JSON.parse(stored) : initialValue;
-    } catch { return initialValue; }
-  });
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(state));
-  }, [key, state]);
-
-  return [state, setState];
-};
-
 export function AppProvider({ children }: { children: ReactNode }) {
   const { settings } = useSettings();
-  const [products, setProducts] = useStorage<Product[]>('products_v2', []);
-  const [assignments, setAssignments] = useStorage<Assignment[]>('assignments_v2', []);
-  const [workLogs, setWorkLogs] = useStorage<WorkLog[]>('worklogs_v2', []);
-  const [shipments, setShipments] = useStorage<InboundShipment[]>('shipments_v2', []);
-  const [dispatches, setDispatches] = useStorage<DispatchBatch[]>('dispatches_v2', []);
-  const [leaves, setLeaves] = useStorage<LeaveLog[]>('leaves_v2_logs', []);
-  const [tasks, setTasks] = useStorage<TaskDefinition[]>('tasks_v2', DEFAULT_TASKS);
-  const [carryForwards, setCarryForwards] = useStorage<AssignmentCarryForward[]>('carry_forwards_v2', []);
-  const [defectReasons, setDefectReasons] = useStorage<DefectReason[]>('defect_reasons', DEFAULT_DEFECT_REASONS);
-  const [workflowNodes, setWorkflowNodesState] = useStorage<any[]>('workflow_nodes', []);
-  const [workflowEdges, setWorkflowEdgesState] = useStorage<any[]>('workflow_edges', []);
-  const [notifications, setNotifications] = useStorage<Notification[]>('notifications_v2', []);
+  const { session } = useAuth();
 
-  // --- Auto-Purge Legacy Demo Data ---
+  const [products, setProducts] = useState<Product[]>([]);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [workLogs, setWorkLogs] = useState<WorkLog[]>([]);
+  const [shipments, setShipments] = useState<InboundShipment[]>([]);
+  const [dispatches, setDispatches] = useState<DispatchBatch[]>([]);
+  const [leaves, setLeaves] = useState<LeaveLog[]>([]);
+  const [tasks, setTasks] = useState<TaskDefinition[]>(DEFAULT_TASKS);
+  const [carryForwards, setCarryForwards] = useState<AssignmentCarryForward[]>([]);
+  const [defectReasons, setDefectReasons] = useState<DefectReason[]>(DEFAULT_DEFECT_REASONS);
+  const [workflowNodes, setWorkflowNodesState] = useState<any[]>([]);
+  const [workflowEdges, setWorkflowEdgesState] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<number>(Date.now());
+  const [isLoading, setIsLoading] = useState(true);
+
+  const loadCloudData = async () => {
+    if (!settings.mongodb.isEnabled) return;
+    try {
+      const [cProducts, cAssignments, cLogs, cLeaves, cTasks, cDefects, cCarry, n, cNodes, cEdges, cDispatches] = await Promise.all([
+        db.getAll<Product>('products'),
+        db.getAll<Assignment>('assignments'),
+        db.getAll<WorkLog>('worklogs'),
+        db.getAll<LeaveLog>('leaves'),
+        db.getAll<TaskDefinition>('tasks'),
+        db.getAll<DefectReason>('defect_reasons'),
+        db.getAll<AssignmentCarryForward>('carry_forwards'),
+        db.getAll<Notification>('notifications'),
+        db.getAll<any>('workflow_nodes'),
+        db.getAll<any>('workflow_edges'),
+        db.getAll<DispatchBatch>('dispatches'),
+      ]);
+      if (cProducts.length) setProducts(cProducts.map(p => ({ ...p, mongoSynced: true })));
+      if (cAssignments.length) setAssignments(cAssignments);
+      if (cLogs.length) setWorkLogs(cLogs);
+      if (cLeaves.length) setLeaves(cLeaves);
+      if (cTasks.length) setTasks(cTasks);
+      if (cDefects.length) setDefectReasons(cDefects);
+      if (cCarry.length) setCarryForwards(cCarry);
+      if (n.length) setNotifications(n);
+      if (cNodes.length) setWorkflowNodesState(cNodes);
+      if (cEdges.length) setWorkflowEdgesState(cEdges);
+      if (cDispatches.length) setDispatches(cDispatches);
+      setLastSyncedAt(Date.now());
+    } catch (e) {
+      console.warn('[CloudSync] Silent load failed:', e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const demoAssignmentIds = ['a1', 'a2', 'a3'];
-    const demoProductIds = ['p1', 'p2', 'p3'];
-    setAssignments(prev => prev.filter(a => !demoAssignmentIds.includes(a.id) && !['SKU-001', 'SKU-002', 'SKU-003'].includes(a.sku)));
-    setProducts(prev => prev.filter(p => !demoProductIds.includes(p.id) && !['SKU-001', 'SKU-002', 'SKU-003'].includes(p.sku)));
-  }, [setAssignments, setProducts]);
+    loadCloudData();
+  }, [settings.mongodb.isEnabled]);
+
+  useEffect(() => {
+    if (!settings.mongodb.isEnabled || isSyncing) return;
+    const intervalId = setInterval(loadCloudData, 1500); 
+    return () => clearInterval(intervalId);
+  }, [settings.mongodb.isEnabled, session?.tenant, isSyncing]);
 
   const runCarryForwardJob = () => {
     const today = new Date().toISOString().split('T')[0];
@@ -130,226 +159,216 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  // --- Zero-Touch Auto-Migration ---
-  useEffect(() => {
-    if (!settings.mongodb.isEnabled) return;
-    
-    const hasSynced = localStorage.getItem('tys_hrms_cloud_synced_v2');
-    if (hasSynced === 'true') return;
+  useEffect(() => { runCarryForwardJob(); }, []);
 
-    const performAutoSync = async () => {
-      console.log('[AutoSync] Performing first-time local to cloud migration...');
-      try {
-        await migrateLocalToCloud();
-        localStorage.setItem('tys_hrms_cloud_synced_v2', 'true');
-        console.log('[AutoSync] Successful.');
-      } catch (e) {
-        console.error('[AutoSync] Failed:', e);
-      }
+  const addProduct = async (p: Omit<Product, 'id' | 'createdAt'>) => {
+    if (!session?.tenant?.id) return;
+    const newProduct: Product = { 
+      ...p, 
+      id: generateId(), 
+      tenantId: session.tenant.id,
+      createdAt: new Date().toISOString(), 
+      inventory: p.inventory || 0 
     };
-    
-    const timer = setTimeout(performAutoSync, 2000);
-    return () => clearTimeout(timer);
-  }, [settings.mongodb.isEnabled]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // --- Silent Heartbeat: 5-Second Background Polling ---
-  useEffect(() => {
-    if (!settings.mongodb.isEnabled) return;
-    
-    const pollCloudData = async () => {
-      try {
-        const [cLogs, cNotifications, cAssignments] = await Promise.all([
-          db.getAll<WorkLog>('worklogs'),
-          db.getAll<Notification>('notifications'),
-          db.getAll<Assignment>('assignments')
-        ]);
-        
-        // Silent update (only if data actually changed)
-        if (cLogs.length) setWorkLogs(cLogs);
-        if (cNotifications.length) setNotifications(cNotifications);
-        if (cAssignments.length) setAssignments(cAssignments);
-      } catch (e) {
-        console.warn('[Heartbeat] Sync failed (silent):', e);
-      }
-    };
-
-    const intervalId = setInterval(pollCloudData, 5000);
-    return () => clearInterval(intervalId);
-  }, [settings.mongodb.isEnabled]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // --- Cloud Sync: Initial Load ---
-  useEffect(() => {
-    if (!settings.mongodb.isEnabled) return;
-    const loadCloudData = async () => {
-      console.log('[CloudSync] Loading initial data from MongoDB...');
-      const [cProducts, cAssignments, cLogs, cTasks, cDefects, cCarry, cNotifications] = await Promise.all([
-        db.getAll<Product>('products'),
-        db.getAll<Assignment>('assignments'),
-        db.getAll<WorkLog>('worklogs'),
-        db.getAll<TaskDefinition>('tasks'),
-        db.getAll<DefectReason>('defect_reasons'),
-        db.getAll<AssignmentCarryForward>('carry_forwards'),
-        db.getAll<Notification>('notifications')
-      ]);
-      if (cProducts.length) setProducts(cProducts.map(p => ({ ...p, mongoSynced: true })));
-      if (cAssignments.length) setAssignments(cAssignments);
-      if (cLogs.length) setWorkLogs(cLogs);
-      if (cTasks.length) setTasks(cTasks);
-      if (cDefects.length) setDefectReasons(cDefects);
-      if (cCarry.length) setCarryForwards(cCarry);
-      if (cNotifications.length) setNotifications(cNotifications);
-      const cNodes = await db.getAll<any>('workflow_nodes');
-      const cEdges = await db.getAll<any>('workflow_edges');
-      if (cNodes.length) setWorkflowNodesState(cNodes);
-      if (cEdges.length) setWorkflowEdgesState(cEdges);
-    };
-    loadCloudData();
-  }, [settings.mongodb.isEnabled]);
-
-  useEffect(() => {
-    runCarryForwardJob();
-  }, []);
-
-  const addProduct = (p: Omit<Product, 'id' | 'createdAt'>) => {
-    const newProduct: Product = { ...p, id: generateId(), createdAt: new Date().toISOString(), inventory: p.inventory || 0 };
     setProducts(prev => [...prev, newProduct]);
-    if (settings.mongodb.isEnabled) db.save('products', newProduct).then(() => setProducts(prev => prev.map(pr => pr.id === newProduct.id ? { ...pr, mongoSynced: true } : pr)));
+    setIsSyncing(true);
+    try {
+      await db.save('products', newProduct);
+      setProducts(prev => prev.map(pr => pr.id === newProduct.id ? { ...pr, mongoSynced: true } : pr));
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   const addProducts = async (pArray: Omit<Product, 'id' | 'createdAt'>[]) => {
+    if (!session?.tenant?.id) return;
     const now = new Date().toISOString();
-    const newProducts = pArray.map(p => ({ ...p, id: generateId(), createdAt: now, mongoSynced: false, inventory: p.inventory || 0 }));
+    const newProducts = pArray.map(p => ({ 
+      ...p, 
+      id: generateId(), 
+      tenantId: session.tenant.id!,
+      createdAt: now, 
+      mongoSynced: false, 
+      inventory: p.inventory || 0 
+    }));
     setProducts(prev => [...prev, ...newProducts]);
-    if (settings.mongodb.isEnabled) {
-      await db.request('insertMany', 'products', { documents: newProducts });
-      const ids = new Set(newProducts.map(p => p.id));
-      setProducts(prev => prev.map(p => ids.has(p.id) ? { ...p, mongoSynced: true } : p));
+    setIsSyncing(true);
+    try {
+        await db.request('insertMany', 'products', { documents: newProducts });
+        setProducts(prev => prev.map(p => newProducts.some(np => np.id === p.id) ? { ...p, mongoSynced: true } : p));
+    } finally {
+        setIsSyncing(false);
     }
   };
 
   const clearProducts = async () => {
     setProducts([]);
-    if (settings.mongodb.isEnabled) await db.request('deleteMany', 'products', { filter: {} });
+    setIsSyncing(true);
+    try { await db.request('deleteMany', 'products', { filter: {} }); } finally { setIsSyncing(false); }
   };
 
-  const updateProduct = (id: string, updates: Partial<Product>) => {
-    setProducts(prev => {
-      const next = prev.map(p => p.id === id ? { ...p, ...updates } : p);
-      if (settings.mongodb.isEnabled) {
-        const updated = next.find(p => p.id === id);
-        if (updated) db.save('products', updated);
-      }
-      return next;
-    });
+  const updateProduct = async (id: string, updates: Partial<Product>) => {
+    setProducts(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+    const updated = products.find(p => p.id === id);
+    if (updated) {
+        setIsSyncing(true);
+        try { await db.save('products', { ...updated, ...updates }); } finally { setIsSyncing(false); }
+    }
   };
 
-  const deleteProduct = (id: string) => {
+  const deleteProduct = async (id: string) => {
     setProducts(prev => prev.filter(p => p.id !== id));
-    if (settings.mongodb.isEnabled) db.delete('products', id);
+    setIsSyncing(true);
+    try { await db.delete('products', id); } finally { setIsSyncing(false); }
   };
 
-  const addAssignment = (a: Partial<Assignment> & { sku: string; userId: string; date: string }) => {
-    const newAssignment = { taskType: 'Checking', mode: 'single', piecesAssigned: a.targetQty || 0, targetQty: a.targetQty || 0, notes: '', ...a, id: generateId(), piecesCompleted: 0, piecesCarriedForward: 0, status: a.status || 'pending', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as Assignment;
+  const addAssignment = async (a: Partial<Assignment> & { sku: string; userId: string; date: string }) => {
+    if (!session?.tenant?.id) return;
+    const newAssignment = { 
+      taskType: 'Checking', 
+      mode: 'single', 
+      piecesAssigned: a.targetQty || 0, 
+      targetQty: a.targetQty || 0, 
+      notes: '', 
+      ...a, 
+      id: generateId(), 
+      tenantId: session.tenant.id,
+      piecesCompleted: 0, 
+      piecesCarriedForward: 0, 
+      status: a.status || 'pending', 
+      createdAt: new Date().toISOString(), 
+      updatedAt: new Date().toISOString() 
+    } as Assignment;
     setAssignments(prev => [...prev, newAssignment]);
-    if (settings.mongodb.isEnabled) db.save('assignments', newAssignment);
+    setIsSyncing(true);
+    try { await db.save('assignments', newAssignment); } finally { setIsSyncing(false); }
   };
 
-  const updateAssignment = (id: string, updates: Partial<Assignment>) => {
-    setAssignments(prev => {
-      const next = prev.map(a => a.id === id ? { ...a, ...updates, updatedAt: new Date().toISOString() } : a);
-      if (settings.mongodb.isEnabled) {
-        const updated = next.find(a => a.id === id);
-        if (updated) db.save('assignments', updated);
-      }
-      return next;
-    });
+  const updateAssignment = async (id: string, updates: Partial<Assignment>) => {
+    const now = new Date().toISOString();
+    setAssignments(prev => prev.map(a => a.id === id ? { ...a, ...updates, updatedAt: now } : a));
+    const updated = assignments.find(a => a.id === id);
+    if (updated) {
+        setIsSyncing(true);
+        try { await db.save('assignments', { ...updated, ...updates, updatedAt: now }); } finally { setIsSyncing(false); }
+    }
   };
 
   const getAssignmentsForUser = (userId: string, date: string) => assignments.filter(a => a.userId === userId && a.date === date);
 
   const clearAssignments = async () => {
     setAssignments([]);
-    if (settings.mongodb.isEnabled) await db.request('deleteMany', 'assignments', { filter: {} });
+    setIsSyncing(true);
+    try { await db.request('deleteMany', 'assignments', { filter: {} }); } finally { setIsSyncing(false); }
   };
 
-  const addWorkLog = (logData: Partial<WorkLog> & { assignmentId: string; userId: string }) => {
-    const log = { date: new Date().toISOString().split('T')[0], piecesIroned: 0, piecesChecked: 0, piecesLabeled: 0, piecesPacked: 0, piecesRejected: 0, ...logData, id: generateId(), loggedAt: new Date().toISOString() } as WorkLog;
+  const addWorkLog = async (logData: Partial<WorkLog> & { assignmentId: string; userId: string }) => {
+    if (!session?.tenant?.id) return;
+    const log = { 
+      date: new Date().toISOString().split('T')[0], 
+      piecesIroned: 0, 
+      piecesChecked: 0, 
+      piecesLabeled: 0, 
+      piecesPacked: 0, 
+      piecesRejected: 0, 
+      ...logData, 
+      id: generateId(), 
+      tenantId: session.tenant.id,
+      loggedAt: new Date().toISOString() 
+    } as WorkLog;
     setWorkLogs(prev => [...prev, log]);
-    if (settings.mongodb.isEnabled) db.save('worklogs', log);
+    setIsSyncing(true);
+    try { await db.save('worklogs', log); } finally { setIsSyncing(false); }
+    
     const piecesDone = (log.piecesIroned || 0) + (log.piecesChecked || 0) + (log.piecesLabeled || 0) + (log.piecesPacked || 0);
     if (piecesDone > 0 || (log.piecesRejected || 0) > 0) {
       setAssignments(prev => prev.map(a => {
         if (a.id !== log.assignmentId) return a;
         const totalGoal = a.targetQty || (a.piecesAssigned + a.piecesCarriedForward);
         const newTotal = a.piecesCompleted + piecesDone;
-        return { ...a, piecesCompleted: newTotal, status: newTotal >= totalGoal ? 'completed' : 'in_progress', updatedAt: new Date().toISOString() };
+        const updatedA = { ...a, piecesCompleted: newTotal, status: newTotal >= totalGoal ? 'completed' : 'in_progress', updatedAt: new Date().toISOString() };
+        db.save('assignments', updatedA);
+        return updatedA as any;
       }));
     }
   };
 
-  const addDispatchBatch = (batch: Omit<DispatchBatch, 'id' | 'packedAt'>) => {
-    const newBatch = { ...batch, id: generateId(), packedAt: new Date().toISOString() };
+  const addDispatchBatch = async (batch: Omit<DispatchBatch, 'id' | 'packedAt'>) => {
+    if (!session?.tenant?.id) return;
+    const newBatch = { ...batch, id: generateId(), tenantId: session.tenant.id, packedAt: new Date().toISOString() };
     setDispatches(prev => [...prev, newBatch]);
-    if (settings.mongodb.isEnabled) db.save('dispatches', newBatch);
+    setIsSyncing(true);
+    try { await db.save('dispatches', newBatch); } finally { setIsSyncing(false); }
   };
 
-  const updateDispatchBatch = (id: string, updates: Partial<DispatchBatch>) => {
-    setDispatches(prev => {
-      const next = prev.map(b => b.id === id ? { ...b, ...updates } : b);
-      if (settings.mongodb.isEnabled) {
-        const updated = next.find(b => b.id === id);
-        if (updated) db.save('dispatches', updated);
-      }
-      return next;
-    });
+  const updateDispatchBatch = async (id: string, updates: Partial<DispatchBatch>) => {
+    setDispatches(prev => prev.map(b => b.id === id ? { ...b, ...updates } : b));
+    const updated = dispatches.find(b => b.id === id);
+    if (updated) {
+        setIsSyncing(true);
+        try { await db.save('dispatches', { ...updated, ...updates }); } finally { setIsSyncing(false); }
+    }
   };
 
-  const requestLeave = (data: Omit<LeaveLog, 'id' | 'status'>) => {
-    const newLeave: LeaveLog = { ...data, id: generateId(), status: 'pending', totalDays: (data as any).totalDays || 1 };
+  const requestLeave = async (data: Omit<LeaveLog, 'id' | 'status'>) => {
+    if (!session?.tenant?.id) return;
+    const newLeave: LeaveLog = { ...data, id: generateId(), tenantId: session.tenant.id, status: 'pending', totalDays: (data as any).totalDays || 1 };
     setLeaves(prev => [...prev, newLeave]);
-    if (settings.mongodb.isEnabled) db.save('leaves', newLeave);
+    setIsSyncing(true);
+    try { await db.save('leaves', newLeave); } finally { setIsSyncing(false); }
   };
 
-  const respondToLeave = (id: string, status: 'approved' | 'rejected', reviewerId?: string) => {
-    setLeaves(prev => {
-      const next = prev.map(l => l.id === id ? { ...l, status, reviewedBy: reviewerId, reviewedAt: new Date().toISOString() } : l);
-      if (settings.mongodb.isEnabled) {
-        const updated = next.find(l => l.id === id);
-        if (updated) db.save('leaves', updated);
-      }
-      return next;
-    });
+  const respondToLeave = async (id: string, status: LeaveStatus, reviewerId?: string) => {
+    const now = new Date().toISOString();
+    setLeaves(prev => prev.map(l => l.id === id ? { ...l, status, reviewedBy: reviewerId, reviewedAt: now } : l));
+    const updated = leaves.find(l => l.id === id);
+    if (updated) {
+        setIsSyncing(true);
+        try { await db.save('leaves', { ...updated, status, reviewedBy: reviewerId, reviewedAt: now }); } finally { setIsSyncing(false); }
+    }
   };
 
-  const addTask = (task: TaskDefinition) => {
+  const addTask = async (task: TaskDefinition) => {
     setTasks(prev => [...prev, task]);
-    if (settings.mongodb.isEnabled) db.save('tasks', task);
+    setIsSyncing(true);
+    try { await db.save('tasks', task); } finally { setIsSyncing(false); }
   };
 
-  const updateTask = (id: string, updates: Partial<TaskDefinition>) => {
-    setTasks(prev => {
-      const next = prev.map(t => t.id === id ? { ...t, ...updates } : t);
-      if (settings.mongodb.isEnabled) {
-        const updated = next.find(t => t.id === id);
-        if (updated) db.save('tasks', updated);
-      }
-      return next;
-    });
+  const updateTask = async (id: string, updates: Partial<TaskDefinition>) => {
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
+    const updated = tasks.find(t => t.id === id);
+    if (updated) {
+        setIsSyncing(true);
+        try { await db.save('tasks', { ...updated, ...updates }); } finally { setIsSyncing(false); }
+    }
   };
 
-  const deleteTask = (id: string) => {
+  const deleteTask = async (id: string) => {
     setTasks(prev => prev.filter(t => t.id !== id));
-    if (settings.mongodb.isEnabled) db.delete('tasks', id);
+    setIsSyncing(true);
+    try { await db.delete('tasks', id); } finally { setIsSyncing(false); }
   };
 
-  const setWorkflowNodes = (nodes: any[]) => {
+  const setWorkflowNodes = async (nodes: any[]) => {
     setWorkflowNodesState(nodes);
-    if (settings.mongodb.isEnabled) db.request('deleteMany', 'workflow_nodes', { filter: {} }).then(() => db.saveMany('workflow_nodes', nodes));
+    setIsSyncing(true);
+    try {
+        await db.request('deleteMany', 'workflow_nodes', { filter: {} });
+        await db.saveMany('workflow_nodes', nodes);
+    } finally {
+        setIsSyncing(false);
+    }
   };
 
-  const setWorkflowEdges = (edges: any[]) => {
+  const setWorkflowEdges = async (edges: any[]) => {
     setWorkflowEdgesState(edges);
-    if (settings.mongodb.isEnabled) db.request('deleteMany', 'workflow_edges', { filter: {} }).then(() => db.saveMany('workflow_edges', edges));
+    setIsSyncing(true);
+    try {
+        await db.request('deleteMany', 'workflow_edges', { filter: {} });
+        await db.saveMany('workflow_edges', edges);
+    } finally {
+        setIsSyncing(false);
+    }
   };
 
   const getDailyStats = (dateStr?: string): DailyStats => {
@@ -375,51 +394,58 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const addNotification = async (nData: Partial<Notification> & { userId: string; title: string; message: string }) => {
     const n: Notification = { ...nData, id: generateId(), read: false, createdAt: new Date().toISOString() } as Notification;
     setNotifications(prev => [n, ...prev]);
-    if (settings.mongodb.isEnabled) await db.save('notifications', n);
+    setIsSyncing(true);
+    try { await db.save('notifications', n); } finally { setIsSyncing(false); }
   };
 
-  const markNotificationRead = (id: string) => {
-    setNotifications(prev => {
-      const next = prev.map(n => n.id === id ? { ...n, read: true } : n);
-      if (settings.mongodb.isEnabled) {
-        const updated = next.find(n => n.id === id);
-        if (updated) db.save('notifications', updated);
-      }
-      return next;
-    });
+  const markNotificationRead = async (id: string) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    const updated = notifications.find(n => n.id === id);
+    if (updated) {
+        setIsSyncing(true);
+        try { await db.save('notifications', { ...updated, read: true }); } finally { setIsSyncing(false); }
+    }
   };
 
   const clearNotifications = async () => {
     setNotifications([]);
-    if (settings.mongodb.isEnabled) await db.request('deleteMany', 'notifications', { filter: {} });
+    setIsSyncing(true);
+    try { await db.request('deleteMany', 'notifications', { filter: {} }); } finally { setIsSyncing(false); }
   };
 
   const signalHelp = async (senderId: string, assignmentId: string) => {
+    if (!session?.tenant?.id) return;
     const assignment = assignments.find(a => a.id === assignmentId);
-    const n: Notification = { id: generateId(), userId: 'broadcast_all', senderId, title: 'HELP REQUESTED', message: `Worker needs assistance with ${assignment?.taskType || 'Task'} on SKU ${assignment?.sku || '...'}.`, type: 'alert', read: false, createdAt: new Date().toISOString() };
+    const n: Notification = { 
+      id: generateId(), 
+      tenantId: session.tenant.id,
+      userId: 'broadcast_all', 
+      senderId, 
+      title: 'HELP REQUESTED', 
+      message: `Worker needs assistance with ${assignment?.taskType || 'Task'} on SKU ${assignment?.sku || '...'}.`, 
+      type: 'alert', 
+      read: false, 
+      createdAt: new Date().toISOString() 
+    };
     setNotifications(prev => [n, ...prev]);
-    if (settings.mongodb.isEnabled) await db.save('notifications', n);
+    setIsSyncing(true);
+    try { await db.save('notifications', n); } finally { setIsSyncing(false); }
   };
 
   const migrateLocalToCloud = async () => {
-    if (!settings.mongodb.isEnabled) return { success: false, count: 0 };
-    await db.saveMany('products', products);
-    await db.saveMany('assignments', assignments);
-    await db.saveMany('worklogs', workLogs);
-    await db.saveMany('tasks', tasks);
-    await db.saveMany('defect_reasons', defectReasons);
-    await db.saveMany('notifications', notifications);
-    await db.saveMany('carry_forwards', carryForwards);
-    setProducts(prev => prev.map(p => ({ ...p, mongoSynced: true })));
-    return { success: true, count: products.length + assignments.length + workLogs.length + tasks.length + notifications.length };
+    if (!session?.tenant?.id) return { success: false, count: 0 };
+    const count = await db.sync.fromLocal(session.tenant.id);
+    if (count > 0) await loadCloudData();
+    return { success: true, count };
   };
 
   return (
     <AppContext.Provider value={{
-      products, assignments, carryForwards, workLogs, shipments, dispatches, dispatchBatches: dispatches, leaves, tasks, defectReasons,
+      products, assignments, carryForwards, workLogs, shipments, dispatches, dispatchBatches: dispatches, leaves, tasks, defectReasons, workflowNodes, workflowEdges, notifications,
+      isSyncing, lastSyncedAt, isLoading,
       addProduct, addProducts, updateProduct, deleteProduct, clearProducts, addAssignment, updateAssignment, getAssignmentsForUser, clearAssignments,
       addWorkLog, addDispatchBatch, updateDispatchBatch, runCarryForwardJob, getDailyStats, requestLeave, respondToLeave, addTask, updateTask, deleteTask,
-      workflowNodes, workflowEdges, setWorkflowNodes, setWorkflowEdges, addNotification, markNotificationRead, clearNotifications, signalHelp, migrateLocalToCloud, notifications,
+      setWorkflowNodes, setWorkflowEdges, addNotification, markNotificationRead, clearNotifications, signalHelp, migrateLocalToCloud,
     }}>
       {children}
     </AppContext.Provider>

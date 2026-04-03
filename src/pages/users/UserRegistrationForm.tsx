@@ -3,6 +3,8 @@ import { UserRole, TaskType, Shift } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useApp } from '../../contexts/AppContext';
+import { useRBAC } from '../../contexts/RBACContext';
+import { Plus } from 'lucide-react';
 
 interface UserRegistrationFormProps {
   onSuccess: () => void;
@@ -13,8 +15,11 @@ export default function UserRegistrationForm({ onSuccess, onCancel }: UserRegist
   const { createUser } = useAuth();
   const { settings, shifts } = useSettings();
   const { tasks } = useApp();
+  const { getAvailableRoles, addRole } = useRBAC();
 
   const [role, setRole] = useState<UserRole>('Worker');
+  const [newRoleInput, setNewRoleInput] = useState('');
+  const [isCreatingRole, setIsCreatingRole] = useState(false);
   const [name, setName] = useState('');
   const [pin, setPin] = useState('');
   const [email, setEmail] = useState('');
@@ -59,6 +64,14 @@ export default function UserRegistrationForm({ onSuccess, onCancel }: UserRegist
     }
   };
 
+  const handleCreateRole = () => {
+    if (!newRoleInput.trim()) return;
+    addRole(newRoleInput.trim());
+    setRole(newRoleInput.trim());
+    setNewRoleInput('');
+    setIsCreatingRole(false);
+  };
+
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
       <div className="mb-6">
@@ -74,21 +87,57 @@ export default function UserRegistrationForm({ onSuccess, onCancel }: UserRegist
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Role Selection */}
-        <div className="grid grid-cols-3 gap-3">
-          {(['Admin', 'Manager', 'Worker'] as UserRole[]).map(r => (
-            <button
-              key={r}
-              type="button"
-              onClick={() => { setRole(r); setAssignedTasks([]); }}
-              className={`py-2 px-4 rounded-xl text-sm font-medium border transition-all ${
-                role === r 
-                  ? 'bg-custom-blue border-custom-blue text-white shadow-lg shadow-custom-blue/20' 
-                  : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
-              }`}
-            >
-              {r}
-            </button>
-          ))}
+        <div className="space-y-3">
+          <label className="block text-sm font-medium text-slate-300">User Type (Role)</label>
+          <div className="flex flex-wrap gap-2">
+            {getAvailableRoles().map(r => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => { setRole(r); setAssignedTasks([]); }}
+                className={`py-2 px-4 rounded-xl text-sm font-bold border transition-all ${
+                  role === r 
+                    ? 'bg-custom-blue border-custom-blue text-white shadow-lg shadow-custom-blue/20' 
+                    : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-white'
+                }`}
+              >
+                {r}
+              </button>
+            ))}
+            
+            {/* Create Custom Role Trigger */}
+            {!isCreatingRole ? (
+              <button
+                type="button"
+                onClick={() => setIsCreatingRole(true)}
+                className="py-2 px-4 rounded-xl text-sm font-bold border border-dashed border-slate-600 text-slate-400 hover:border-slate-400 hover:text-slate-200 transition-all flex items-center gap-1 bg-slate-900"
+              >
+                <Plus className="w-4 h-4" /> Add User Type
+              </button>
+            ) : (
+              <div className="flex items-center gap-2 bg-slate-800 rounded-xl p-1 border border-slate-700">
+                <input
+                  type="text"
+                  autoFocus
+                  value={newRoleInput}
+                  onChange={e => setNewRoleInput(e.target.value)}
+                  placeholder="e.g. Sales Rep"
+                  className="bg-transparent border-none text-sm text-white px-3 py-1 outline-none w-32 focus:ring-0"
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                       e.preventDefault();
+                       handleCreateRole();
+                    }
+                  }}
+                />
+                <button type="button" onClick={handleCreateRole} className="p-1.5 bg-custom-blue text-white rounded-lg hover:bg-blue-600 transition-colors">
+                   <Plus className="w-3.5 h-3.5" />
+                </button>
+                <button type="button" onClick={() => setIsCreatingRole(false)} className="pr-2 text-slate-500 hover:text-slate-300 text-xs font-bold uppercase">Cancel</button>
+              </div>
+            )}
+          </div>
+          <p className="text-xs text-slate-500 mt-1">New user types will automatically appear in the RBAC permissions matrix.</p>
         </div>
 
         {/* Basic Info */}
