@@ -186,7 +186,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const newProducts = pArray.map(p => ({ 
       ...p, 
       id: generateId(), 
-      tenantId: session.tenant.id!,
+      tenantId: session!.tenant!.id!,
       createdAt: now, 
       mongoSynced: false, 
       inventory: p.inventory || 0 
