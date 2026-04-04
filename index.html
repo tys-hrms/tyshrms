@@ -17,7 +17,22 @@
     <title>HRMSCore | Operations Management</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+        <div id="initial-loading" style="background:#0f172a; height:100vh; width:100%; display:flex; align-items:center; justify-content:center; flex-direction:column; color:#94a3b8; font-family:sans-serif;">
+            <div style="width:40px; height:40px; border:3px solid rgba(45,124,246,0.1); border-top-color:#2d7cf6; border-radius:50%; animation: spin 0.8s linear infinite;"></div>
+            <p style="margin-top:20px; font-weight:500;">Initializing HRMSCore...</p>
+            <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+            <script>
+                // Fail-safe: If root is still empty after 10 seconds, show error info
+                setTimeout(() => {
+                    const root = document.getElementById('root');
+                    if (root && root.innerHTML.includes('Initializing')) {
+                        root.innerHTML = '<div style="color:#ef4444; padding:20px; text-align:center;"><b>Error: Site Initialization Failed</b><br><small>This can happen if the site was updated but your browser is using an old cache. Please try a Hard Refresh (Ctrl+Shift+R or Cmd+Shift+R).</small></div>';
+                    }
+                }, 10000);
+            </script>
+        </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
