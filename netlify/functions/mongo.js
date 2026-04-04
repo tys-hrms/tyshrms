@@ -27,28 +27,33 @@ let cachedClient = null;
 
 async function getClient() {
   if (cachedClient) return cachedClient;
-  if (!MONGODB_URI) throw new Error('MONGODB_URI environment variable is not set.');
   
+  const strings = [
+    MONGODB_URI, // Direct IP
+    "mongodb+srv://vnkt045_db_user:byU6RBdx6BMHrW6f@cluster0.obki2is.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0" // SRV Fallback
+  ];
+
   let lastError;
-  for (let i = 0; i < 3; i++) {
-    try {
-      console.log(`[DB] Attempting connection to Atlas (Attempt ${i+1})...`);
-      const client = new MongoClient(MONGODB_URI, {
-        connectTimeoutMS: 60000,
-        serverSelectionTimeoutMS: 60000,
-        socketTimeoutMS: 90000,
-        directConnection: false,
-        retryWrites: true,
-      });
-      await client.connect();
-      console.log(`[DB] Success! Connected on attempt ${i+1}.`);
-      cachedClient = client;
-      return client;
-    } catch (err) {
-      console.warn(`[DB] Attempt ${i+1} failed:`, err.message);
-      lastError = err;
-      // Small pause between retries
-      await new Promise(r => setTimeout(r, 1000));
+  for (const str of strings) {
+    for (let i = 0; i < 2; i++) {
+       try {
+         console.log(`[DB] Attempting path: ${str.includes('srv') ? 'SRV' : 'IP'} (Attempt ${i+1})...`);
+         const client = new MongoClient(str, {
+           connectTimeoutMS: 60000,
+           serverSelectionTimeoutMS: 60000,
+           socketTimeoutMS: 90000,
+           tlsAllowInvalidCertificates: true,
+           directConnection: !str.includes('srv'),
+         });
+         await client.connect();
+         console.log(`[DB] SUCCESS! Handshake complete.`);
+         cachedClient = client;
+         return client;
+       } catch (err) {
+         console.warn(`[DB] Path failed:`, err.message);
+         lastError = err;
+         await new Promise(r => setTimeout(r, 1000));
+       }
     }
   }
   throw lastError;

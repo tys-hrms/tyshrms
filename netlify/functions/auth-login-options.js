@@ -19,25 +19,34 @@ export const handler = async (event) => {
   try {
     const { userId } = JSON.parse(event.body || '{}');
 
+    const strings = [
+      MONGODB_URI,
+      "mongodb+srv://vnkt045_db_user:byU6RBdx6BMHrW6f@cluster0.obki2is.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+    ];
+
     let lastError;
     let client;
-    for (let i = 0; i < 3; i++) {
-      try {
-        client = new MongoClient(MONGODB_URI, {
-          connectTimeoutMS: 60000,
-          serverSelectionTimeoutMS: 60000,
-          socketTimeoutMS: 90000,
-          directConnection: false,
-          retryWrites: true,
-        });
-        await client.connect();
-        break;
-      } catch (err) {
-        lastError = err;
-        if (i === 2) throw err;
-        await new Promise(r => setTimeout(r, 1000));
+    for (const str of strings) {
+      for (let i = 0; i < 2; i++) {
+        try {
+          client = new MongoClient(str, {
+            connectTimeoutMS: 60000,
+            serverSelectionTimeoutMS: 60000,
+            socketTimeoutMS: 90000,
+            tlsAllowInvalidCertificates: true,
+            directConnection: !str.includes('srv'),
+          });
+          await client.connect();
+          break;
+        } catch (err) {
+          lastError = err;
+          // Pauze between retries
+          await new Promise(r => setTimeout(r, 1000));
+        }
       }
+      if (client?.topology?.isConnected()) break;
     }
+    if (!client?.topology?.isConnected()) throw lastError || new Error('Failed to connect to any DB path');
     const db = client.db(DB_NAME);
 
     let allowCredentials = [];
