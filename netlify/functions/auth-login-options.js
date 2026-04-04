@@ -1,8 +1,8 @@
 import { generateAuthenticationOptions } from '@simplewebauthn/server';
 import { MongoClient } from 'mongodb';
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://tys_admin:tys%401234@cluster0.1oxlktm.mongodb.net/?appName=Cluster0';
-const DB_NAME = process.env.MONGODB_DB || 'tys_hrms';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://vnkt045_db_user:byU6RBdx6BMHrW6f@cluster0.obki2is.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+const DB_NAME = process.env.MONGODB_DB || 'hrmscore';
 const RP_ID = process.env.URL ? new URL(process.env.URL).hostname : 'localhost';
 
 const headers = {
