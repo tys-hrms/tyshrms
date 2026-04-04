@@ -29,16 +29,25 @@ async function getClient() {
   if (cachedClient) return cachedClient;
   if (!MONGODB_URI) throw new Error('MONGODB_URI environment variable is not set.');
   
-  // Advanced options for serverless/Netlify stability
+  console.log(`[DB] Attempting connection to Atlas...`);
+  
   const client = new MongoClient(MONGODB_URI, {
-    connectTimeoutMS: 30000,
-    serverSelectionTimeoutMS: 30000,
-    socketTimeoutMS: 45000,
+    connectTimeoutMS: 60000,
+    serverSelectionTimeoutMS: 60000,
+    socketTimeoutMS: 90000,
+    directConnection: false,
+    retryWrites: true,
   });
   
-  await client.connect();
-  cachedClient = client;
-  return client;
+  try {
+    await client.connect();
+    console.log(`[DB] Success! Connected to cluster.`);
+    cachedClient = client;
+    return client;
+  } catch (err) {
+    console.error(`[DB] Connection failed:`, err.message);
+    throw err;
+  }
 }
 
 export const handler = async (event) => {
