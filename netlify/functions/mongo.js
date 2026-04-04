@@ -29,25 +29,29 @@ async function getClient() {
   if (cachedClient) return cachedClient;
   if (!MONGODB_URI) throw new Error('MONGODB_URI environment variable is not set.');
   
-  console.log(`[DB] Attempting connection to Atlas...`);
-  
-  const client = new MongoClient(MONGODB_URI, {
-    connectTimeoutMS: 60000,
-    serverSelectionTimeoutMS: 60000,
-    socketTimeoutMS: 90000,
-    directConnection: false,
-    retryWrites: true,
-  });
-  
-  try {
-    await client.connect();
-    console.log(`[DB] Success! Connected to cluster.`);
-    cachedClient = client;
-    return client;
-  } catch (err) {
-    console.error(`[DB] Connection failed:`, err.message);
-    throw err;
+  let lastError;
+  for (let i = 0; i < 3; i++) {
+    try {
+      console.log(`[DB] Attempting connection to Atlas (Attempt ${i+1})...`);
+      const client = new MongoClient(MONGODB_URI, {
+        connectTimeoutMS: 60000,
+        serverSelectionTimeoutMS: 60000,
+        socketTimeoutMS: 90000,
+        directConnection: false,
+        retryWrites: true,
+      });
+      await client.connect();
+      console.log(`[DB] Success! Connected on attempt ${i+1}.`);
+      cachedClient = client;
+      return client;
+    } catch (err) {
+      console.warn(`[DB] Attempt ${i+1} failed:`, err.message);
+      lastError = err;
+      // Small pause between retries
+      await new Promise(r => setTimeout(r, 1000));
+    }
   }
+  throw lastError;
 }
 
 export const handler = async (event) => {

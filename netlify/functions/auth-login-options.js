@@ -19,8 +19,25 @@ export const handler = async (event) => {
   try {
     const { userId } = JSON.parse(event.body || '{}');
 
-    const client = new MongoClient(MONGODB_URI);
-    await client.connect();
+    let lastError;
+    let client;
+    for (let i = 0; i < 3; i++) {
+      try {
+        client = new MongoClient(MONGODB_URI, {
+          connectTimeoutMS: 60000,
+          serverSelectionTimeoutMS: 60000,
+          socketTimeoutMS: 90000,
+          directConnection: false,
+          retryWrites: true,
+        });
+        await client.connect();
+        break;
+      } catch (err) {
+        lastError = err;
+        if (i === 2) throw err;
+        await new Promise(r => setTimeout(r, 1000));
+      }
+    }
     const db = client.db(DB_NAME);
 
     let allowCredentials = [];
