@@ -135,6 +135,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setLastSyncedAt(Date.now());
     } catch (e) {
       console.warn('[CloudSync] Global load error:', e);
+      // INDESTRUCTIBLE FALLBACK: If connection fails, force loading to false so dashboard renders
+      setIsLoading(false);
     } finally {
       setIsLoading(false);
     }
