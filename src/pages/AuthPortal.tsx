@@ -110,10 +110,10 @@ export default function AuthPortal() {
         <div className="flex-1 p-4 lg:p-6 bg-slate-50 border-b lg:border-b-0 lg:border-r border-slate-200 overflow-y-auto custom-scrollbar">
           <div className="max-w-4xl mx-auto flex flex-col min-h-full justify-center py-4">
             <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 bg-brand-600 rounded-lg"><Building2 className="w-5 h-5 text-white" /></div>
+              <div className="p-2 bg-brand-600 rounded-lg"><ShieldCheck className="w-5 h-5 text-white" /></div>
               <div>
-                 <h1 className="text-xl font-black text-slate-900 tracking-tighter uppercase italic leading-none">TYS-HRMS</h1>
-                 <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Enterprise Registration v2.2.1</p>
+                 <h1 className="text-xl font-black text-slate-900 tracking-tighter uppercase leading-none italic">HRMSCore</h1>
+                 <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Enterprise Registration v2.2.1-stable</p>
               </div>
             </div>
 
@@ -232,12 +232,12 @@ export default function AuthPortal() {
         </div>
 
         {/* ─── RIGHT: LOGIN ─────────────────────────────────────────────── */}
-        <div className="lg:w-[400px] p-4 lg:p-10 bg-white flex flex-col justify-center border-t lg:border-t-0 border-slate-200">
-          <div className="max-w-sm mx-auto w-full py-4">
+        <div className="lg:w-[400px] p-4 lg:p-10 bg-white flex flex-col justify-center border-t lg:border-t-0 border-slate-200 overflow-hidden">
+          <div className="max-w-sm mx-auto w-full py-4 h-full flex flex-col justify-center">
              <div className="text-center mb-8">
-               <div className="w-12 h-12 bg-slate-900 border border-slate-800 flex items-center justify-center mx-auto mb-3 rounded-lg"><ShieldCheck size={24} className="text-white" /></div>
-               <h1 className="text-2xl font-black text-slate-900 tracking-tighter uppercase italic leading-none">TYS-HRMS</h1>
-               <p className="text-[9px] text-slate-400 uppercase tracking-widest font-black mt-2">Identity Access Portal v2.2.1</p>
+               <div className="w-12 h-12 bg-brand-600 border border-brand-700 shadow-lg flex items-center justify-center mx-auto mb-3 rounded-lg"><ShieldCheck size={24} className="text-white" /></div>
+               <h1 className="text-2xl font-black text-slate-900 tracking-tighter uppercase leading-none italic">HRMSCore</h1>
+               <p className="text-[9px] text-slate-400 uppercase tracking-widest font-black mt-2">Identity Access Portal v2.2.1-stable</p>
              </div>
 
              <form onSubmit={handleLogin} className="space-y-4">
@@ -275,7 +275,7 @@ export default function AuthPortal() {
                   <button type="button" onClick={()=>setLoginData(p=>({...p, pin:p.pin.slice(0,-1)}))} className="h-10 bg-slate-100 text-slate-400 flex items-center justify-center rounded"><Delete size={12}/></button>
                 </div>
 
-                <button type="submit" disabled={isLoggingIn} className="w-full py-4 bg-slate-900 hover:bg-black text-white font-black uppercase tracking-[0.4em] text-[10px] rounded transition-all mt-4 flex items-center justify-center gap-2 shadow-xl">
+                <button type="submit" disabled={isLoggingIn} className="w-full py-4 bg-brand-600 hover:bg-brand-700 text-white font-black uppercase tracking-[0.4em] text-[10px] rounded transition-all mt-4 flex items-center justify-center gap-2 shadow-xl">
                    {isLoggingIn ? <Loader2 size={14} className="animate-spin"/> : <>Access Workspace <ShieldCheck size={14}/></>}
                 </button>
              </form>
@@ -285,7 +285,7 @@ export default function AuthPortal() {
       </div>
       
       <div className="py-4 text-center border-t border-slate-200 bg-slate-50">
-        <p className="text-[9px] text-slate-400 font-bold tracking-[0.6em] uppercase">TYS-HRMS Enterprise Suite v2.2.1-stable</p>
+        <p className="text-[9px] text-slate-400 font-bold tracking-[0.6em] uppercase">HRMSCore Enterprise Suite v2.2.1-stable</p>
       </div>
 
       <style>{`
