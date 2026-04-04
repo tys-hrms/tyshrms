@@ -44,7 +44,8 @@ interface AuthContextType {
   isSyncing: boolean;
   lastSyncedAt: number;
   discoverTenant: (tenantId: string) => Promise<{ success: boolean; tenant?: Tenant; error?: string }>;
-  registerTenant: (data: Omit<Tenant, 'id' | 'createdAt' | 'isActive'> & { pin: string }) => Promise<{ success: boolean; tenantId?: string; error?: string }>;
+  unifiedLogin: (tenantId: string, identifier: string, pin: string) => Promise<{ success: boolean; error?: string }>;
+  registerTenant: (data: any) => Promise<{ success: boolean; tenantId?: string; error?: string }>;
   loginAdmin: (email: string, pin: string) => Promise<{ success: boolean; error?: string }>;
   loginStaff: (pin: string, faceDetected?: boolean) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
@@ -78,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [users, setUsers] = useState<User[]>([]);
   const [session, setSession] = useState<SessionState>(() => {
     try {
-      const stored = sessionStorage.getItem('tys_hrms_session');
+      const stored = localStorage.getItem('tys_hrms_session');
       return stored ? JSON.parse(stored) : defaultSession;
     } catch { return defaultSession; }
   });
@@ -92,7 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      sessionStorage.setItem('tys_hrms_session', JSON.stringify(session));
+      localStorage.setItem('tys_hrms_session', JSON.stringify(session));
     } catch { /* ignore */ }
   }, [session]);
 
@@ -176,27 +177,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const discoverTenant = async (identifier: string) => {
     try {
-      // Find by ID or by Slug
-      // Find by ID (try both hyphenated and non-hyphenated)
-      let tenant = await db.tenants.findOne({ id: identifier });
-      
-      if (!tenant && /^\d{6}$/.test(identifier)) {
-        const formatted = `${identifier.slice(0, 2)}-${identifier.slice(2)}`;
-        tenant = await db.tenants.findOne({ id: formatted });
-      }
-
-      if (!tenant) {
-        tenant = await db.tenants.findOne({ companySlug: identifier });
-      }
-      
+      const tenant = await db.tenants.findOne({ id: identifier });
       if (!tenant) return { success: false, error: 'Organization not found' };
       
-      const tenantSettings = await db.tenants.getSettings(tenant.id);
-      if (tenantSettings) updateSettings(tenantSettings);
+      const resSettings = await db.tenants.getSettings(tenant.id);
+      if (resSettings) updateSettings(resSettings);
       setSession(prev => ({ ...prev, tenant }));
       return { success: true, tenant };
     } catch (err: any) {
       return { success: false, error: err.message || 'Discovery failed' };
+    }
+  };
+
+  /**
+   * NEW: Unified Login for all roles
+   * inputs: Tenant ID, Username/Identifier, PIN
+   */
+  const unifiedLogin = async (tenantId: string, identifier: string, pin: string) => {
+    try {
+      // 1. Ensure Tenant is set
+      let tenant = session.tenant;
+      if (!tenant || tenant.id !== tenantId) {
+        const res = await discoverTenant(tenantId);
+        if (!res.success) return { success: false, error: res.error };
+        tenant = res.tenant!;
+      }
+
+      // 2. Find User (Unified SQL Check)
+      const user = await db.users.findOne({ tenant_id: tenantId, pin_code: pin });
+      if (!user) return { success: false, error: 'Invalid PIN' };
+      
+      // If user has a name/username, ensure it matches
+      if (user.name !== identifier && user.username !== identifier && user.email !== identifier) {
+         return { success: false, error: 'User PIN does not match the provided Username' };
+      }
+
+      setSession(prev => ({ ...prev, currentUser: user }));
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Login failed' };
     }
   };
 
@@ -210,17 +229,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       const companySlug = slugify(data.name);
-      const tenant: Tenant = { 
+      // Map to Snake Case for SQL Schema
+      const tenant: any = { 
         id, 
-        ...data, 
+        name: data.name,
+        admin_name: data.adminName,
+        email: data.email,
+        phone: data.phone,
+        state: data.state,
+        company_type: data.companyType,
+        employee_count: (data as any).employeeCount,
+        base_lat: (data as any).base_lat,
+        base_lng: (data as any).base_lng,
+        shift_start_time: (data as any).shift_start_time,
+        grace_period_mins: (data as any).grace_period_mins,
         companySlug,
         isActive: true, 
         createdAt: new Date().toISOString() 
       };
       
-      await db.tenants.insert(tenant as any);
-      const admin: User = { id: generateId(), tenantId: id, name: data.adminName, pinCode: data.pin, role: 'Admin', email: data.email, phone: data.phone, isActive: true, createdAt: new Date().toISOString() };
-      await db.users.insert(admin as any);
+      await db.tenants.insert(tenant);
+      
+      // Admin User with Unified Username
+      const admin: any = { 
+        id: generateId(), 
+        tenant_id: id, 
+        name: data.adminName, 
+        username: (data as any).username, // Critical for Unified Login
+        pin_code: data.pin, 
+        role: 'Admin', 
+        email: data.email, 
+        phone: data.phone, 
+        isActive: true, 
+        created_at: new Date().toISOString() 
+      };
+      await db.users.insert(admin);
+      
       await db.tenants.saveSettings(id, { branding: { companyName: data.name, primaryColor: '#2d7cf6', secondaryColor: '#14b8a6', accentColor: '#f59e0b', themeMode: 'light' } });
       return { success: true, tenantId: id };
     } catch (err: any) {
@@ -259,7 +303,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { success: true };
   };
 
-  const logout = () => setSession(defaultSession);
+  const logout = () => {
+    localStorage.removeItem('tys_hrms_session');
+    setSession(defaultSession);
+  };
 
   const createUser = async (data: Omit<User, 'id' | 'createdAt' | 'isActive' | 'tenantId'>) => {
     if (!session.tenant) return false;
@@ -352,7 +399,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider value={{
       users, session, attendanceLogs, breakLogs, unreadCount, isFirstRun: false, isLoading, isSyncing, lastSyncedAt,
-      discoverTenant, registerTenant, loginAdmin, loginStaff, logout,
+      discoverTenant, unifiedLogin, registerTenant, loginAdmin, loginStaff, logout,
       createUser, updateUser, deleteUser, clockIn, clockOut, startBreak, endBreak,
       getTodayAttendance, getAllTodayAttendance, setGeofenceBypass, registerBiometrics,
       migrateLocalToCloud

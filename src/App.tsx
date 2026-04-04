@@ -7,8 +7,7 @@ import { RBACProvider, useRBAC } from './contexts/RBACContext';
 import { CRMProvider } from './contexts/CRMContext';
 import { PayrollProvider } from './contexts/PayrollContext';
 
-import LoginPage from './pages/LoginPage';
-import RegistrationPage from './pages/RegistrationPage';
+import AuthPortal from './pages/AuthPortal';
 import FirstRunPage from './pages/FirstRunPage';
 import AppShell from './components/layout/AppShell';
 
@@ -58,13 +57,9 @@ function AppRoutes() {
   if (settingsLoading || rbacLoading) return <LoadingSplash message="Syncing System Settings..." />;
 
   // Auth & Discovery Logic
-  if (location.pathname === '/register') return <RegistrationPage />;
-  
-  // If no tenant is selected, show login (discovery)
-  if (!session.tenant) return <LoginPage />;
-  
-  // If tenant is selected but no user is logged in, show login (identity)
-  if (!session.currentUser) return <LoginPage />;
+  if (location.pathname === '/register' || !session.tenant || !session.currentUser) {
+    return <AuthPortal />;
+  }
 
   // Redirect root / to slug-based dashboard
   if (location.pathname === '/') {

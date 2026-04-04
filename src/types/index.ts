@@ -31,6 +31,12 @@ export interface Tenant {
   };
   
   createdAt: string;
+
+  // Operational Environment (V10 - SQL Pivot)
+  base_lat?: number;
+  base_lng?: number;
+  shift_start_time?: string;
+  grace_period_mins?: number;
 }
 
 // ─── User & Auth ───────────────────────────────────────────────────────────
@@ -58,8 +64,11 @@ export interface BiometricCredential {
 export interface User {
   id: string;
   tenantId?: string;
+  tenant_id?: string; // SQL Mapping
   name: string;
+  username?: string;  // Unified Access Identifier
   pinCode: string;
+  pin_code?: string; // SQL Mapping
   role: UserRole;
   salaryDetails?: {
     basicSalary: number;
@@ -76,6 +85,7 @@ export interface User {
   biometricCredentials?: BiometricCredential[];
   geofenceBypassUntil?: string; // ISO Date String for temporary bypass
   createdAt: string;
+  created_at?: string; // SQL Mapping
   leaveBalances?: {
     casual: number;
     sick: number;
@@ -483,7 +493,7 @@ export interface CRMLead {
   address?: string;
   gstNumber?: string;
   isGstCompliant: boolean;
-
+ 
   // Assignment & Hierarchy
   primaryRepId?: string;   // Clocked-in Rep
   taggedRepIds: string[];  // Multiple collaborative reps
