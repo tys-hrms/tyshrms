@@ -4,7 +4,7 @@
 import { MongoClient, ObjectId } from 'mongodb';
 
 const MONGODB_URI = process.env.MONGODB_URI || 
-  "mongodb+srv://vnkt045_db_user:byU6RBdx6BMHrW6f@cluster0.obki2is.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+  "mongodb://vnkt045_db_user:byU6RBdx6BMHrW6f@ac-z6rzsgs-shard-00-00.obki2is.mongodb.net:27017,ac-z6rzsgs-shard-00-01.obki2is.mongodb.net:27017,ac-z6rzsgs-shard-00-02.obki2is.mongodb.net:27017/hrmscore?ssl=true&replicaSet=atlas-cctgo0-shard-0&authSource=admin&retryWrites=true&w=majority&appName=Cluster0";
 const DB_NAME = process.env.MONGODB_DB || "hrmscore";
 
 const ALLOWED_COLLECTIONS = new Set([
