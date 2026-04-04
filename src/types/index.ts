@@ -1,23 +1,22 @@
-// HRMSCore V2 — Core TypeScript Types
+// HRMSCore V2 — Core TypeScript Types (Supabase Optimized)
 
 // ─── Tenant & SaaS ─────────────────────────────────────────────────────────
 
 export interface Tenant {
-  id: string; // 6-digit random number (e.g., "827192")
+  id: string; // 6-digit random number (e.g., "24-1234")
   name: string;
-  adminName: string;
-  dob: string;
-  companyType: string;
-  employeeCount: string;
+  admin_name?: string;
+  dob?: string;
+  company_type: string;
+  employee_count: string;
   email: string;
   phone: string;
-  companySlug?: string; // e.g. "acme-corp"
+  companySlug?: string;
   gst?: string;
   isActive: boolean;
   
-  // Regional & Payroll Compliance (V9)
-  state: string;           // Indian State (e.g. "Maharashtra", "Karnataka")
-  payrollSettings: {
+  state: string;
+  payrollSettings?: {
     epfEnabled: boolean;
     esiEnabled: boolean;
     ptEnabled: boolean;
@@ -27,12 +26,11 @@ export interface Tenant {
       label: string;
       isWorking: boolean; 
     }[];
-    weekends?: number[]; // [0, 6] for Sat/Sun
+    weekends?: number[];
   };
   
-  createdAt: string;
+  created_at: string;
 
-  // Operational Environment (V10 - SQL Pivot)
   base_lat?: number;
   base_lng?: number;
   shift_start_time?: string;
@@ -41,34 +39,25 @@ export interface Tenant {
 
 // ─── User & Auth ───────────────────────────────────────────────────────────
 
-export type UserRole = string; // E.g., 'Admin', 'Manager', 'Worker', or custom types
+export type UserRole = string;
 
 export interface Shift {
   id: string;
-  tenantId?: string;
+  tenant_id: string;
   name: string;
-  startTime: string;    // "HH:MM"
+  startTime: string; 
   endTime: string;
   lunchStart: string;
   lunchEnd: string;
-  createdAt: string;
-}
-
-export interface BiometricCredential {
-  id: string;
-  publicKey: string;
-  transports?: string[];
-  createdAt: string;
+  created_at: string;
 }
 
 export interface User {
   id: string;
-  tenantId?: string;
-  tenant_id?: string; // SQL Mapping
+  tenant_id: string;
   name: string;
-  username?: string;  // Unified Access Identifier
-  pinCode: string;
-  pin_code?: string; // SQL Mapping
+  username?: string;
+  pin_code: string;
   role: UserRole;
   salaryDetails?: {
     basicSalary: number;
@@ -77,63 +66,10 @@ export interface User {
   };
   email?: string;
   phone?: string;
-  contactNumber?: string;
   shiftId?: string;
-  locationId?: string;
-  assignedTasks?: TaskType[];   // for Worker
   isActive: boolean;
-  biometricCredentials?: BiometricCredential[];
-  geofenceBypassUntil?: string; // ISO Date String for temporary bypass
-  createdAt: string;
-  created_at?: string; // SQL Mapping
-  leaveBalances?: {
-    casual: number;
-    sick: number;
-    annual: number;
-  };
-  salaryStructure?: {
-    basic: number;
-    hra: number;
-    otherAllowances: number;
-    isEpfMember: boolean;
-    isEsiMember: boolean;
-    isPtMember: boolean;
-    gratuityEnabled: boolean;
-  };
-}
-
-
-// ─── RBAC ──────────────────────────────────────────────────────────────────
-
-export type AppModule =
-  | 'dashboard'
-  | 'users'
-  | 'products'
-  | 'assignments'
-  | 'attendance'
-  | 'leaves'
-  | 'settings'
-  | 'rbac'
-  | 'reports'
-  | 'crm'
-  | 'payroll';
-
-export type PermissionAction = 'view' | 'create' | 'edit' | 'delete';
-export type PermissionScope = 'none' | 'location' | 'global';
-
-export interface RolePermission {
-  role: UserRole;
-  module: AppModule;
-  viewScope: PermissionScope;
-  createScope: PermissionScope;
-  editScope: PermissionScope;
-  deleteScope: PermissionScope;
-  features?: {
-    biometricAllowed?: boolean;
-    systemPrintAllowed?: boolean;
-    aiAssistantAllowed?: boolean;
-    calculatorAllowed?: boolean;
-  };
+  geofenceBypassUntil?: string;
+  created_at: string;
 }
 
 // ─── Tasks ─────────────────────────────────────────────────────────────────
@@ -141,32 +77,18 @@ export interface RolePermission {
 export type TaskType = 'Ironing' | 'Checking' | 'Labeling' | 'Packing' | string;
 export type TaskMode = 'single' | 'jodi';
 
-export interface TaskDefinition {
-  id: string;
-  tenantId?: string;
-  name: TaskType;
-  allowedModes: TaskMode[];  // Ironing/Checking: both; Labeling/Packing: ['single']
-  defaultMode: TaskMode;
-  icon?: string;
-  createdAt: string;
-}
-
 // ─── Products ──────────────────────────────────────────────────────────────────
 
 export interface Product {
   id: string;
-  tenantId?: string;
+  tenant_id: string;
   sku: string;
   title: string;
   barcode?: string;
-  imageUrl?: string;
+  image_url?: string;
   unit: string;
-  inventory?: number;      // Current stock level (Pieces)
-  shopifyProductId?: string;
-  shopifyVariantId?: string;
-  syncedAt?: string;
-  mongoSynced?: boolean;   // true when confirmed pushed to / fetched from MongoDB
-  createdAt: string;
+  inventory?: number;
+  created_at: string;
 }
 
 // ─── Assignments ───────────────────────────────────────────────────────────
@@ -175,69 +97,38 @@ export type AssignmentStatus = 'pending' | 'in_progress' | 'completed' | 'paused
 
 export interface Assignment {
   id: string;
-  tenantId?: string;
-  date: string;                    // "YYYY-MM-DD"
-  dueDate?: string;
+  tenant_id: string;
+  date: string;
   userId: string;
+  user_id: string; // SQL Mapping
   sku: string;
-  taskType: TaskType;
+  task_type: string;
   mode: TaskMode;
-  piecesAssigned: number;          // original assignment
-  targetQty: number;               // Alias used by some modules
-  piecesCarriedForward: number;    // added from previous days
-  piecesCompleted: number;         // cumulative done so far
+  pieces_assigned: number;
+  pieces_carried_forward: number;
+  pieces_completed: number;
   status: AssignmentStatus;
-  table?: string;                  // Table assigned to the task
-  assignedBy: string;              // userId of assigner
   notes?: string;
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
 }
-
-export interface CRMInteraction {
-  id: string;
-  type: 'call' | 'whatsapp' | 'email' | 'note' | 'meeting';
-  note: string;
-  createdBy: string;
-  createdAt: string;
-}
-
-// pending balance = piecesAssigned + piecesCarriedForward - piecesCompleted
 
 // ─── Work Logs ─────────────────────────────────────────────────────────────
 
-export interface AssignmentCarryForward {
-  id: string;
-  originalAssignmentId: string;
-  date: string;
-  piecesRemaining: number;
-}
-
 export interface WorkLog {
   id: string;
-  tenantId?: string;
-  assignmentId: string;
-  userId: string;
+  tenant_id: string;
+  assignment_id: string;
+  user_id: string;
   date: string;
-  action?: 'pass' | 'reject';      // Used by Checker
-  piecesProcessed?: number;        // Used by Checker
-  piecesIroned: number;
-  piecesChecked: number;
-  piecesLabeled: number;
-  piecesPacked: number;
-  piecesRejected: number;
-  rejectReason?: string;
-  barcodeScanned?: string;
-  notes?: string;
-  loggedAt: string;
+  pieces_ironed: number;
+  pieces_checked: number;
+  pieces_labeled: number;
+  pieces_packed: number;
+  pieces_rejected: number;
+  reject_reason?: string;
+  logged_at: string;
 }
-
-export interface DefectReason {
-  id: string;
-  tenantId?: string;
-  label: string;
-}
-
 
 // ─── Attendance ────────────────────────────────────────────────────────────
 
@@ -245,34 +136,16 @@ export type AttendanceMethod = 'manual' | 'auto';
 
 export interface AttendanceLog {
   id: string;
-  tenantId?: string;
-  userId: string;
+  tenant_id: string;
+  user_id: string;
   date: string;
-  clockIn?: string;
-  clockOut?: string;
-  latLngIn?: string;
-  latLngOut?: string;
+  clock_in?: string;
+  clock_out?: string;
+  lat_lng_in?: string;
+  lat_lng_out?: string;
   method: AttendanceMethod;
-  totalMinutes?: number;
+  total_minutes?: number;
   status: 'present' | 'absent' | 'on_leave' | 'half_day' | 'holiday';
-}
-
-export interface SalaryRecord {
-  id: string;
-  tenantId: string;
-  userId: string;
-  month: string; // YYYY-MM
-  workingDays: number;
-  grossPay: number;
-  epfDeduction: number;
-  esiDeduction: number;
-  ptDeduction: number;
-  otherDeductions: number;
-  netPay: number;
-  status: 'draft' | 'processed' | 'paid';
-  createdAt: string;
-  processedAt?: string;
-  paidAt?: string;
 }
 
 export interface BreakLog {
@@ -282,299 +155,19 @@ export interface BreakLog {
   endTime?: string;
 }
 
-// ─── Leave Management ──────────────────────────────────────────────────────
-
-export type LeaveType = 'casual' | 'sick' | 'annual' | 'unpaid' | 'medical';
-export type LeaveStatus = 'pending_manager' | 'pending_admin' | 'approved' | 'rejected' | 'cancelled' | 'pending';
-
-export interface LeaveLog {
-  id: string;
-  tenantId?: string;
-  userId: string;
-  date: string; // Start Date
-  endDate?: string;
-  totalDays: number;
-  type: LeaveType;
-  reason: string;
-  status: LeaveStatus;
-  reviewedBy?: string;     // Final Approval (Admin/Manager)
-  reviewedAt?: string;
-  managerApprovedBy?: string; // Step 1 of Hierarchy
-  medicalCertificateUrl?: string; // V9 Upload Feature
-}
-
-// ─── Shipments & Dispatch ──────────────────────────────────────────────────
-
-export interface InboundShipment {
-  id: string;
-  tenantId?: string;
-  receiverId: string;
-  sku: string;
-  quantity: number;
-  supplierName?: string;
-  poNumber?: string;
-  notes?: string;
-  receivedAt: string;
-}
-
-export interface DispatchBatch {
-  id: string;
-  tenantId?: string;
-  packerId: string;
-  sku?: string;
-  labelScanned?: string;
-  quantity: number;
-  status: 'ready' | 'dispatched';
-  packedAt: string;
-  dispatchedAt?: string;
-}
-
 // ─── Settings ──────────────────────────────────────────────────────────────
-
-export interface ShopifySettings {
-  storeUrl: string;
-  accessToken: string;
-  apiVersion: string;
-  syncEnabled: boolean;
-  lastSyncedAt?: string;
-}
-
-
-export interface MongoSettings {
-  appId: string;
-  apiKey: string;
-  dataSource: string;
-  database: string;
-  isEnabled: boolean;
-}
-
-export interface LeaveAutomationSettings {
-  enabled: boolean;
-  whatsappEnabled: boolean;
-  emailEnabled: boolean;
-  whatsappTemplate: string;
-  emailTemplate: string;
-}
-
-export interface Workstation {
-  id: string;
-  tenantId?: string;
-  name: string;      // e.g. "Table 1"
-  taskTypes: string[]; // e.g. ["Checking", "Ironing"]
-}
-
-export type LocationType = 'head_office' | 'branch' | 'warehouse';
-
-export interface Location {
-  id: string;
-  tenantId?: string;
-  name: string;
-  type: LocationType;
-  address?: string;
-  latitude?: number;
-  longitude?: number;
-  geofenceRadius?: number; // in meters, default 50
-  isPrimary?: boolean;
-}
 
 export interface BrandingSettings {
   companyName: string;
   logoUrl?: string;
-  primaryColor: string;    // e.g., "#2d7cf6"
-  secondaryColor: string;  // e.g., "#14b8a6"
-  accentColor: string;     // e.g., "#f59e0b"
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
   themeMode: 'dark' | 'light';
 }
 
 export interface AppSettings {
   tenantId: string;
-  shopify: ShopifySettings;
-  mongodb: MongoSettings;
-  leaveAutomation: LeaveAutomationSettings;
-  workstations: Workstation[];
-  locations: Location[];
   branding: BrandingSettings;
-  
-  // Regional & Payroll (V9)
   state: string;
-  payrollSettings: {
-    epfEnabled: boolean;
-    esiEnabled: boolean;
-    ptEnabled: boolean;
-    gratuityEnabled: boolean;
-    holidayList: {
-      date: string;
-      label: string;
-      isWorking: boolean;
-    }[];
-    weekends?: number[];
-  };
-  // AI Configuration (cloud-stored, not localStorage)
-  openAiKey?: string;
-}
-
-
-// ─── Notifications ─────────────────────────────────────────────────────────
-
-export interface Notification {
-  id: string;
-  tenantId?: string;
-  userId: string;      // recipient
-  senderId?: string;   // who triggered it
-  title: string;
-  message: string;
-  type: 'assignment' | 'leave' | 'system' | 'alert' | 'crm_lead' | 'crm_breach' | 'success';
-  read: boolean;
-  ticketId?: string; // Link to CRM Ticket if applicable
-  createdAt: string;
-}
-
-// ─── Dashboard Stats ───────────────────────────────────────────────────────
-
-export interface DailyStats {
-  date: string;
-  totalPiecesAssigned: number;
-  totalPiecesCompleted: number;
-  totalPiecesPending: number;
-  totalIroned: number;
-  totalChecked: number;
-  totalLabeled: number;
-  totalPacked: number;
-  totalRejected: number;
-  activeWorkers: number;
-  presentToday: number;
-  onLeave: number;
-  completedAssignments: number;
-  pendingAssignments: number;
-}
-
-// ─── CRM & Lead Management ────────────────────────────────────────────────
- 
-export type CRMLeadSource = 
-  | 'whatsapp' 
-  | 'instagram' 
-  | 'facebook' 
-  | 'linkedin' 
-  | 'youtube' 
-  | 'word_of_mouth' 
-  | 'other' 
-  | 'manual';
-
-export interface CRMOrderItem {
-  sku: string;
-  quantity: number;
-  basePrice: number;
-  discountPercent: number; // Applied per-line
-  gstPercent: number;      // 0, 5, 12, 18
-  total: number;
-}
-
-export type CRMLeadStage = string; // e.g. "Lead In", "Negotiation", "Fulfillment"
-
-export interface CRMLead {
-  id: string;              // Internal ID
-  ticketNumber: string;    // TKT-YYYY-DDMM-XXXXXX
-  tenantId: string;
-  source: CRMLeadSource;
-  sourceNotes?: string;    // For "other" or manual details
-  
-  // Qualification (V8/V10)
-  businessType: string;
-  leadTemperature: 'Cold' | 'Warm' | 'Hot';
-  expectedTimeline: string;
-  clientCategory: 'B2B' | 'B2C';
-  leadBrief?: string;
-  
-  // Contact Info
-  customerName: string;
-  companyName?: string;
-  phone: string;
-  email?: string;
-  address?: string;
-  gstNumber?: string;
-  isGstCompliant: boolean;
- 
-  // Assignment & Hierarchy
-  primaryRepId?: string;   // Clocked-in Rep
-  taggedRepIds: string[];  // Multiple collaborative reps
-  assignedManagerId?: string; // Failsafe redirection
-  // Engagement
-  stage: CRMLeadStage;
-  status: 'active' | 'won' | 'lost' | 'archived';
-  priority: 'low' | 'medium' | 'high';
-  interactions?: CRMInteraction[];
-
-  // Financials
-  items: CRMOrderItem[];
-  transportationCharges: number;
-  totalValue: number;
-  currency: string;        // Default "INR"
-  
-  // SLA & Timers
-  createdAt: string;
-  updatedAt: string;
-  slaBreachAt: string;     // ISO String calculation based on settings
-  isBreached: boolean;
-
-  // Conversion
-  convertedOrderId?: string;
-  
-  // Metadata
-  lastContactedAt?: string;
-  nextFollowUpAt?: string;
-}
-
-export type OrderFulfillmentStatus = 
-  | 'ordered' 
-  | 'fulfilled' 
-  | 'dispatched' 
-  | 'delivered';
-
-export interface CRMOrder {
-  id: string;
-  ticketNumber: string;
-  tenantId: string;
-  leadId: string;
-  customerId: string;
-  items: CRMOrderItem[];
-  totalValue: number;
-  fulfillmentStatus: OrderFulfillmentStatus;
-  trackingNumber?: string;
-  dispatchedAt?: string;
-  deliveredAt?: string;
-  createdAt: string;
-}
-
-export interface CRMSettings {
-  tenantId: string;
-  ticketPrefix: string;    // e.g. "TKT"
-  enableSmartAssignment: boolean;
-  
-  // SLA Timers in minutes
-  slaConfig: {
-    whatsapp: number;
-    instagram: number;
-    facebook: number;
-    linkedin: number;
-    youtube: number;
-    word_of_mouth: number;
-    manual: number;
-    other: number;
-  };
-  
-  // Pipeline Workflow
-  stages: {
-    id: string;
-    label: string;
-    color: string;
-    order: number;
-  }[];
-  
-  badges: {
-    label: string;
-    color: string;
-  }[];
-
-  // Escalation Matrix
-  escalationUserIds?: string[];
 }

@@ -4,25 +4,17 @@ import { useAuth } from '../contexts/AuthContext';
 import { 
   Building2, 
   User as UserIcon, 
-  Mail, 
-  Phone, 
   Lock, 
   Eye, 
   EyeOff, 
   CheckCircle2, 
-  AlertCircle,
   Database,
   MapPin,
-  Clock,
   Navigation,
   RefreshCw,
   ShieldCheck,
   Delete,
-  Loader2,
-  Briefcase,
-  Calendar,
-  Globe,
-  Users
+  Loader2
 } from 'lucide-react';
 
 export default function AuthPortal() {
@@ -37,10 +29,10 @@ export default function AuthPortal() {
 
   // ─── REGISTRATION STATE ──────────────────────────────────────────────────
   const [regData, setRegData] = useState({
-    adminName: '', username: '', pin: '', dob: '', companyName: '', gst: '',
-    companyType: 'Garment Manufacturing', employeeCount: '1-10', state: 'Maharashtra',
+    admin_name: '', username: '', pin_code: '', dob: '', name: '', gst: '',
+    company_type: 'Garment Manufacturing', employee_count: '1-10', state: 'Maharashtra',
     email: '', phone: '', countryCode: '+91', baseLat: '', baseLng: '',
-    shiftStartTime: '09:00', gracePeriod: '15', termsAccepted: false
+    shift_start_time: '09:00', grace_period_mins: '15', termsAccepted: false
   });
   const [showRegPin, setShowRegPin] = useState(false);
   const [regError, setRegError] = useState('');
@@ -69,19 +61,28 @@ export default function AuthPortal() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault(); setRegError('');
-    if (!regData.companyName || !regData.username || !regData.pin || !regData.baseLat) { setRegError('Complete all sections'); return; }
+    if (!regData.name || !regData.username || !regData.pin_code || !regData.baseLat) { setRegError('Complete all sections'); return; }
     if (!regData.termsAccepted) { setRegError('Accept geofencing terms'); return; }
     if (parseInt(userCaptcha) !== captcha.a) { setRegError('Security sum invalid'); return; }
 
     setIsRegistering(true);
     try {
       const result = await registerTenant({
-        name: regData.companyName, adminName: regData.adminName, username: regData.username,
-        email: regData.email, phone: `${regData.countryCode}${regData.phone}`,
-        pin: regData.pin, state: regData.state, companyType: regData.companyType,
-        employeeCount: regData.employeeCount, gst: regData.gst, dob: regData.dob,
-        base_lat: parseFloat(regData.baseLat), base_lng: parseFloat(regData.baseLng),
-        shift_start_time: regData.shiftStartTime, grace_period_mins: parseInt(regData.gracePeriod)
+        name: regData.name, 
+        admin_name: regData.admin_name, 
+        username: regData.username,
+        email: regData.email, 
+        phone: `${regData.countryCode}${regData.phone}`,
+        pin_code: regData.pin_code, 
+        state: regData.state, 
+        company_type: regData.company_type,
+        employee_count: regData.employee_count, 
+        gst: regData.gst, 
+        dob: regData.dob,
+        base_lat: parseFloat(regData.baseLat), 
+        base_lng: parseFloat(regData.baseLng),
+        shift_start_time: regData.shift_start_time + ':00',
+        grace_period_mins: parseInt(regData.grace_period_mins)
       });
       if (result.success && result.tenantId) {
         setSuccessResult({ id: result.tenantId, username: regData.username });
@@ -109,12 +110,11 @@ export default function AuthPortal() {
         {/* ─── LEFT: REGISTRATION ────────────────────────────────────────── */}
         <div className="flex-1 p-4 lg:p-6 bg-slate-50 border-b lg:border-b-0 lg:border-r border-slate-200 overflow-y-auto custom-scrollbar">
           <div className="max-w-4xl mx-auto flex flex-col min-h-full justify-center py-4">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 bg-brand-600 rounded-lg"><ShieldCheck className="w-5 h-5 text-white" /></div>
-              <div>
-                 <h1 className="text-xl font-black text-slate-900 tracking-tighter uppercase leading-none italic">HRMSCore</h1>
-                 <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Enterprise Registration v2.2.1-stable</p>
-              </div>
+            <div className="mb-6">
+              <h1 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                HRMSCore <span className="bg-slate-200 text-slate-600 text-[10px] px-2 py-0.5 rounded font-black tracking-normal self-center">v2.2.1-stable</span>
+              </h1>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Enterprise Registration</p>
             </div>
 
             {successResult ? (
@@ -132,13 +132,12 @@ export default function AuthPortal() {
                 {regError && <div className="p-3 bg-red-50 border-l-4 border-red-500 text-[10px] text-red-700 uppercase font-black tracking-widest">{regError}</div>}
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-x-3 gap-y-4">
-                  {/* Entity Data */}
                   <div className="md:col-span-3 pb-1 border-b border-slate-200 flex items-center gap-2">
                     <Database className="w-3 h-3 text-brand-600" /><span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Business Entity</span>
                   </div>
                   <div className="space-y-1">
                     <label className="text-[8px] text-slate-400 font-black uppercase tracking-widest ml-1">Company Name</label>
-                    <input name="companyName" value={regData.companyName} onChange={x => setRegData(p=>({...p, companyName:x.target.value}))} className="w-full bg-white border border-slate-200 p-2 text-xs outline-none focus:ring-1 focus:ring-brand-500 rounded shadow-sm" placeholder="Legal Organization Name" />
+                    <input name="name" value={regData.name} onChange={x => setRegData(p=>({...p, name:x.target.value}))} className="w-full bg-white border border-slate-200 p-2 text-xs outline-none focus:ring-1 focus:ring-brand-500 rounded shadow-sm" placeholder="Legal Organization Name" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[8px] text-slate-400 font-black uppercase tracking-widest ml-1">GST Identification</label>
@@ -146,19 +145,19 @@ export default function AuthPortal() {
                   </div>
                   <div className="space-y-1">
                     <label className="text-[8px] text-slate-400 font-black uppercase tracking-widest ml-1">Operations Base</label>
-                    <select name="state" value={regData.state} onChange={x => setRegData(p=>({...p, state:x.target.value}))} className="w-full bg-white border border-slate-200 p-2 text-xs text-slate-700 appearance-none rounded shadow-sm">
+                    <select name="state" value={regData.state} onChange={x => setRegData(p=>({...p, state:x.target.value}))} className="w-full bg-white border border-slate-200 p-2 text-xs text-slate-700 rounded shadow-sm appearance-none">
                       {states.map(s=><option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
                   <div className="space-y-1">
                     <label className="text-[8px] text-slate-400 font-black uppercase tracking-widest ml-1">Industry Segment</label>
-                    <select name="companyType" value={regData.companyType} onChange={x => setRegData(p=>({...p, companyType:x.target.value}))} className="w-full bg-white border border-slate-200 p-2 text-xs text-slate-700 appearance-none rounded shadow-sm">
+                    <select name="company_type" value={regData.company_type} onChange={x => setRegData(p=>({...p, company_type:x.target.value}))} className="w-full bg-white border border-slate-200 p-2 text-xs text-slate-700 rounded shadow-sm appearance-none">
                       {segments.map(s=><option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
                   <div className="space-y-1">
                     <label className="text-[8px] text-slate-400 font-black uppercase tracking-widest ml-1">Workforce Size</label>
-                    <select name="employeeCount" value={regData.employeeCount} onChange={x => setRegData(p=>({...p, employeeCount:x.target.value}))} className="w-full bg-white border border-slate-200 p-2 text-xs text-slate-700 rounded shadow-sm">
+                    <select name="employee_count" value={regData.employee_count} onChange={x => setRegData(p=>({...p, employee_count:x.target.value}))} className="w-full bg-white border border-slate-200 p-2 text-xs text-slate-700 rounded shadow-sm">
                       <option value="1-10">1-10 Employees</option><option value="11-50">11-50 Employees</option><option value="51-200">51-200 Employees</option><option value="201+">201+ Employees</option>
                     </select>
                   </div>
@@ -167,7 +166,6 @@ export default function AuthPortal() {
                     <input name="phone" value={regData.phone} onChange={x => setRegData(p=>({...p, phone:x.target.value}))} className="w-full bg-white border border-slate-200 p-2 text-xs rounded shadow-sm" placeholder="Phone Number" />
                   </div>
 
-                  {/* Identity Data */}
                   <div className="md:col-span-3 pt-1 pb-1 border-b border-slate-200 flex items-center gap-2">
                     <ShieldCheck className="w-3 h-3 text-brand-600" /><span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Admin Credentials</span>
                   </div>
@@ -178,13 +176,13 @@ export default function AuthPortal() {
                   <div className="space-y-1">
                     <label className="text-[8px] text-slate-400 font-black uppercase tracking-widest ml-1">Access PIN</label>
                     <div className="relative">
-                      <input type={showRegPin?'text':'password'} value={regData.pin} onChange={x => setRegData(p=>({...p, pin:x.target.value.replace(/\D/g,'').slice(0,6)}))} className="w-full bg-white border border-slate-200 p-2 text-xs text-center font-mono tracking-widest rounded shadow-sm" placeholder="6X PIN" />
+                      <input type={showRegPin?'text':'password'} value={regData.pin_code} onChange={x => setRegData(p=>({...p, pin_code:x.target.value.replace(/\D/g,'').slice(0,6)}))} className="w-full bg-white border border-slate-200 p-2 text-xs text-center font-mono tracking-widest rounded shadow-sm" placeholder="6X PIN" />
                       <button type="button" onClick={()=>setShowRegPin(!showRegPin)} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 focus:outline-none">{showRegPin?<EyeOff size={12}/>:<Eye size={12}/>}</button>
                     </div>
                   </div>
                   <div className="space-y-1">
                     <label className="text-[8px] text-slate-400 font-black uppercase tracking-widest ml-1">Administrator Name</label>
-                    <input name="adminName" value={regData.adminName} onChange={x => setRegData(p=>({...p, adminName:x.target.value}))} className="w-full bg-white border border-slate-200 p-2 text-xs rounded shadow-sm" placeholder="Full Name" />
+                    <input name="admin_name" value={regData.admin_name} onChange={x => setRegData(p=>({...p, admin_name:x.target.value}))} className="w-full bg-white border border-slate-200 p-2 text-xs rounded shadow-sm" placeholder="Full Name" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[8px] text-slate-400 font-black uppercase tracking-widest ml-1">Date of Birth</label>
@@ -195,7 +193,6 @@ export default function AuthPortal() {
                     <input name="email" value={regData.email} onChange={x => setRegData(p=>({...p, email:x.target.value}))} className="w-full bg-white border border-slate-200 p-2 text-xs rounded shadow-sm" placeholder="admin@company.com" />
                   </div>
 
-                  {/* Attendance Data */}
                   <div className="md:col-span-3 pt-1 pb-1 border-b border-slate-200 flex items-center gap-2">
                     <MapPin className="w-3 h-3 text-brand-600" /><span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Environment</span>
                   </div>
@@ -207,8 +204,8 @@ export default function AuthPortal() {
                     <button type="button" onClick={captureGPS} className="px-3 bg-slate-900 text-white rounded text-[8px] font-black uppercase tracking-widest hover:bg-black transition-all shadow-sm">Pin HQ</button>
                   </div>
                   <div className="flex gap-2 items-center pt-1 md:col-span-1">
-                    <div className="flex-1"><label className="text-[7px] text-slate-400 block uppercase font-black">Shift Start</label><input type="time" value={regData.shiftStartTime} onChange={x=>setRegData(p=>({...p, shiftStartTime:x.target.value}))} className="w-full bg-white border border-slate-200 p-1 rounded text-[10px]" /></div>
-                    <div className="flex-1"><label className="text-[7px] text-slate-400 block uppercase font-black">Grace (m)</label><input type="number" value={regData.gracePeriod} onChange={x=>setRegData(p=>({...p, gracePeriod:x.target.value}))} className="w-full bg-white border border-slate-200 p-1 rounded text-[10px]" /></div>
+                    <div className="flex-1"><label className="text-[7px] text-slate-400 block uppercase font-black">Shift Start</label><input type="time" value={regData.shift_start_time} onChange={x=>setRegData(p=>({...p, shift_start_time:x.target.value}))} className="w-full bg-white border border-slate-200 p-1 rounded text-[10px]" /></div>
+                    <div className="flex-1"><label className="text-[7px] text-slate-400 block uppercase font-black">Grace (m)</label><input type="number" value={regData.grace_period_mins} onChange={x=>setRegData(p=>({...p, grace_period_mins:x.target.value}))} className="w-full bg-white border border-slate-200 p-1 rounded text-[10px]" /></div>
                   </div>
                 </div>
 
@@ -234,10 +231,11 @@ export default function AuthPortal() {
         {/* ─── RIGHT: LOGIN ─────────────────────────────────────────────── */}
         <div className="lg:w-[400px] p-4 lg:p-10 bg-white flex flex-col justify-center border-t lg:border-t-0 border-slate-200 overflow-hidden">
           <div className="max-w-sm mx-auto w-full py-4 h-full flex flex-col justify-center">
-             <div className="text-center mb-8">
-               <div className="w-12 h-12 bg-brand-600 border border-brand-700 shadow-lg flex items-center justify-center mx-auto mb-3 rounded-lg"><ShieldCheck size={24} className="text-white" /></div>
-               <h1 className="text-2xl font-black text-slate-900 tracking-tighter uppercase leading-none italic">HRMSCore</h1>
-               <p className="text-[9px] text-slate-400 uppercase tracking-widest font-black mt-2">Identity Access Portal v2.2.1-stable</p>
+             <div className="mb-8">
+               <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                 HRMSCore <span className="bg-slate-200 text-slate-600 text-[10px] px-2 py-0.5 rounded font-black tracking-normal self-center">v2.2.1-stable</span>
+               </h1>
+               <p className="text-[9px] text-slate-400 uppercase tracking-widest font-black mt-2">Identity Access Portal</p>
              </div>
 
              <form onSubmit={handleLogin} className="space-y-4">
