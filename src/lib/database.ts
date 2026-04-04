@@ -32,18 +32,28 @@ async function callMongoClient(action: string, collection: string, payload: any 
         });
 
         clearTimeout(timeoutId);
-        const result = await response.json();
+        const text = await response.text();
+        let result;
+        try {
+            result = JSON.parse(text);
+        } catch (e) {
+            throw new Error(`Invalid API response: ${text.slice(0, 50)}...`);
+        }
         
         if (!response.ok) {
             console.error(`[DB ERROR ${action} on ${collection}]:`, result.error || 'Request failed');
-            throw new Error(result.error || `Database ${action} failed`);
+            throw new Error(result.error || `Database ${action} failed: ${response.statusText}`);
         }
         
         return result;
     } catch (err: any) {
         clearTimeout(timeoutId);
-        const msg = err.name === 'AbortError' ? `Connection timeout (${action} on ${collection})` : err.message;
-        throw new Error(msg);
+        if (err.name === 'AbortError') {
+            const timeoutMsg = `Database timeout (${action} on ${collection}). This is usually an Atlas firewall or protocol error.`;
+            console.error(timeoutMsg);
+            throw new Error(timeoutMsg);
+        }
+        throw err;
     }
 }
 

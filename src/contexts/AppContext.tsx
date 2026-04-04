@@ -96,19 +96,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     try {
       const tid = session.tenant.id;
+      
+      const fetchData = async (col: string, Type: any) => {
+        try {
+          const r = await db.request('find', col, { filter: { tenantId: tid } });
+          return (r.documents || []) as typeof Type;
+        } catch (e) {
+          console.warn(`[CloudSync] Failed to load ${col}:`, e);
+          return [];
+        }
+      };
+
       const [cProducts, cAssignments, cLogs, cLeaves, cTasks, cDefects, cCarry, n, cNodes, cEdges, cDispatches] = await Promise.all([
-        db.request('find', 'products', { filter: { tenantId: tid } }).then(r => (r.documents || []) as Product[]),
-        db.request('find', 'assignments', { filter: { tenantId: tid } }).then(r => (r.documents || []) as Assignment[]),
-        db.request('find', 'worklogs', { filter: { tenantId: tid } }).then(r => (r.documents || []) as WorkLog[]),
-        db.request('find', 'leaves', { filter: { tenantId: tid } }).then(r => (r.documents || []) as LeaveLog[]),
-        db.request('find', 'tasks', { filter: { tenantId: tid } }).then(r => (r.documents || []) as TaskDefinition[]),
-        db.request('find', 'defect_reasons', { filter: { tenantId: tid } }).then(r => (r.documents || []) as DefectReason[]),
-        db.request('find', 'carry_forwards', { filter: { tenantId: tid } }).then(r => (r.documents || []) as AssignmentCarryForward[]),
-        db.request('find', 'notifications', { filter: { tenantId: tid } }).then(r => (r.documents || []) as Notification[]),
-        db.request('find', 'workflow_nodes', { filter: { tenantId: tid } }).then(r => (r.documents || []) as any[]),
-        db.request('find', 'workflow_edges', { filter: { tenantId: tid } }).then(r => (r.documents || []) as any[]),
-        db.request('find', 'dispatches', { filter: { tenantId: tid } }).then(r => (r.documents || []) as DispatchBatch[]),
+        fetchData('products', [] as Product[]),
+        fetchData('assignments', [] as Assignment[]),
+        fetchData('worklogs', [] as WorkLog[]),
+        fetchData('leaves', [] as LeaveLog[]),
+        fetchData('tasks', [] as TaskDefinition[]),
+        fetchData('defect_reasons', [] as DefectReason[]),
+        fetchData('carry_forwards', [] as AssignmentCarryForward[]),
+        fetchData('notifications', [] as Notification[]),
+        fetchData('workflow_nodes', [] as any[]),
+        fetchData('workflow_edges', [] as any[]),
+        fetchData('dispatches', [] as DispatchBatch[]),
       ]);
+
       if (cProducts.length) setProducts(cProducts.map((p: Product) => ({ ...p, mongoSynced: true })));
       if (cAssignments.length) setAssignments(cAssignments);
       if (cLogs.length) setWorkLogs(cLogs);
@@ -121,9 +133,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (cEdges.length) setWorkflowEdgesState(cEdges);
       if (cDispatches.length) setDispatches(cDispatches);
       setLastSyncedAt(Date.now());
-      setLastSyncedAt(Date.now());
     } catch (e) {
-      console.warn('[CloudSync] Silent load failed:', e);
+      console.warn('[CloudSync] Global load error:', e);
     } finally {
       setIsLoading(false);
     }
