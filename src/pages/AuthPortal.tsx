@@ -19,7 +19,6 @@ import {
   ShieldCheck,
   Delete,
   Loader2,
-  Users,
   Briefcase,
   Calendar,
   Globe
@@ -30,445 +29,225 @@ export default function AuthPortal() {
   const { registerTenant, unifiedLogin } = useAuth();
 
   // ─── LOGIN STATE ─────────────────────────────────────────────────────────
-  const [loginData, setLoginData] = useState({
-    tenantId: '',
-    username: '',
-    pin: ''
-  });
+  const [loginData, setLoginData] = useState({ tenantId: '', username: '', pin: '' });
   const [showLoginPin, setShowLoginPin] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   // ─── REGISTRATION STATE ──────────────────────────────────────────────────
   const [regData, setRegData] = useState({
-    adminName: '',
-    username: '', 
-    pin: '',
-    dob: '',
-    companyName: '',
-    gst: '',
-    companyType: 'Garment Manufacturing',
-    employeeCount: '1-10',
-    state: 'Maharashtra',
-    email: '',
-    phone: '',
-    countryCode: '+91',
-    baseLat: '',
-    baseLng: '',
-    shiftStartTime: '09:00',
-    gracePeriod: '15',
-    termsAccepted: false
+    adminName: '', username: '', pin: '', dob: '', companyName: '', gst: '',
+    companyType: 'Garment Manufacturing', employeeCount: '1-10', state: 'Maharashtra',
+    email: '', phone: '', countryCode: '+91', baseLat: '', baseLng: '',
+    shiftStartTime: '09:00', gracePeriod: '15', termsAccepted: false
   });
   const [showRegPin, setShowRegPin] = useState(false);
   const [regError, setRegError] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
-  const [successResult, setSuccessResult] = useState<{ id: string; username: string } | null>(null);
+  const [successResult, setSuccessResult] = useState<{ id: string; username: string }|null>(null);
 
-  // Captcha for registration
   const [captcha, setCaptcha] = useState({ q: '', a: 0 });
   const [userCaptcha, setUserCaptcha] = useState('');
 
-  useEffect(() => {
-    generateCaptcha();
-  }, []);
-
+  useEffect(() => { generateCaptcha(); }, []);
   const generateCaptcha = () => {
     const n1 = Math.floor(Math.random() * 10) + 1;
     const n2 = Math.floor(Math.random() * 10) + 1;
     setCaptcha({ q: `${n1} + ${n2}`, a: n1 + n2 });
   };
 
-  // ─── HANDLERS ────────────────────────────────────────────────────────────
-  
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginError('');
-    if (!loginData.tenantId || !loginData.username || !loginData.pin) {
-      setLoginError('All login fields are required'); return;
-    }
+    e.preventDefault(); setLoginError('');
+    if (!loginData.tenantId || !loginData.username || !loginData.pin) { setLoginError('Fields required'); return; }
     setIsLoggingIn(true);
     try {
       const res = await unifiedLogin(loginData.tenantId, loginData.username, loginData.pin);
-      if (res.success) navigate('/');
-      else setLoginError(res.error || 'Authentication Failed');
-    } catch (err: any) {
-      setLoginError(err.message || 'System error. Please try again.');
-    } finally {
-      setIsLoggingIn(false);
-    }
+      if (res.success) navigate('/'); else setLoginError(res.error || 'Authentication Failed');
+    } catch (err: any) { setLoginError(err.message || 'System error'); } finally { setIsLoggingIn(false); }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setRegError('');
-    
-    if (!regData.companyName || !regData.username || !regData.pin || !regData.baseLat) {
-       setRegError('Complete all registration sections first'); return;
-    }
-    if (!regData.termsAccepted) {
-       setRegError('Please accept the workforce geofencing terms'); return;
-    }
-    if (parseInt(userCaptcha) !== captcha.a) {
-       setRegError('Security sum invalid'); return;
-    }
+    e.preventDefault(); setRegError('');
+    if (!regData.companyName || !regData.username || !regData.pin || !regData.baseLat) { setRegError('Complete all sections'); return; }
+    if (!regData.termsAccepted) { setRegError('Accept geofencing terms'); return; }
+    if (parseInt(userCaptcha) !== captcha.a) { setRegError('Security sum invalid'); return; }
 
     setIsRegistering(true);
     try {
       const result = await registerTenant({
-        name: regData.companyName,
-        adminName: regData.adminName,
-        username: regData.username,
-        email: regData.email,
-        phone: `${regData.countryCode}${regData.phone}`,
-        pin: regData.pin,
-        state: regData.state,
-        companyType: regData.companyType,
-        employeeCount: regData.employeeCount,
-        gst: regData.gst,
-        dob: regData.dob,
-        base_lat: parseFloat(regData.baseLat),
-        base_lng: parseFloat(regData.baseLng),
-        shift_start_time: regData.shiftStartTime,
-        grace_period_mins: parseInt(regData.gracePeriod)
+        name: regData.companyName, adminName: regData.adminName, username: regData.username,
+        email: regData.email, phone: `${regData.countryCode}${regData.phone}`,
+        pin: regData.pin, state: regData.state, companyType: regData.companyType,
+        employeeCount: regData.employeeCount, gst: regData.gst, dob: regData.dob,
+        base_lat: parseFloat(regData.baseLat), base_lng: parseFloat(regData.baseLng),
+        shift_start_time: regData.shiftStartTime, grace_period_mins: parseInt(regData.gracePeriod)
       });
-
       if (result.success && result.tenantId) {
         setSuccessResult({ id: result.tenantId, username: regData.username });
-        setLoginData(prev => ({ ...prev, tenantId: result.tenantId!, username: regData.username }));
-      } else {
-        setRegError(result.error || 'Infrastructure deployment failed');
-      }
-    } catch (err: any) {
-      setRegError(err.message || 'System fault');
-    } finally {
-      setIsRegistering(false);
-    }
+        setLoginData(p => ({ ...p, tenantId: result.tenantId!, username: regData.username }));
+      } else setRegError(result.error || 'Setup failed');
+    } catch (err: any) { setRegError(err.message || 'System fault'); } finally { setIsRegistering(false); }
   };
 
   const captureGPS = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition((pos) => {
-        setRegData(prev => ({ 
-          ...prev, 
-          baseLat: pos.coords.latitude.toFixed(6), 
-          baseLng: pos.coords.longitude.toFixed(6) 
-        }));
+        setRegData(p => ({ ...p, baseLat: pos.coords.latitude.toFixed(6), baseLng: pos.coords.longitude.toFixed(6) }));
       }, () => setRegError('Location access denied'));
     }
   };
 
-  const handlePinPad = (digit: string) => {
-    if (loginData.pin.length >= 6) return;
-    setLoginData(prev => ({ ...prev, pin: prev.pin + digit }));
-  };
-
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col font-inter selection:bg-brand-500 selection:text-white relative overflow-x-hidden">
+    <div className="min-h-screen bg-slate-50 flex flex-col font-inter selection:bg-brand-500 selection:text-white transition-colors duration-500">
       
-      {/* Background Decor */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        <div className="absolute -top-1/4 -left-1/4 w-1/2 h-1/2 bg-brand-500/5 blur-[120px] rounded-full" />
-        <div className="absolute -bottom-1/4 -right-1/4 w-1/2 h-1/2 bg-emerald-500/5 blur-[120px] rounded-full" />
-      </div>
-
-      <div className="flex-1 flex flex-col lg:flex-row relative z-10">
+      <div className="flex-1 flex flex-col lg:flex-row relative">
         
         {/* ─── LEFT: REGISTRATION ────────────────────────────────────────── */}
-        <div className="flex-1 p-6 lg:p-16 bg-slate-900/50 backdrop-blur-sm border-r border-white/5 relative overflow-y-auto max-h-screen lg:max-h-none custom-scrollbar">
-          
-          <div className="max-w-3xl mx-auto">
-            <div className="flex items-center gap-4 mb-10">
-              <Building2 className="w-8 h-8 text-brand-400" />
-              <div>
-                <h1 className="text-xl font-black text-white uppercase tracking-tighter italic leading-none">Infrastructure Setup</h1>
-                <p className="text-[10px] text-slate-500 uppercase tracking-widest font-black mt-1">Tenant Provisioning v2.2</p>
-              </div>
+        <div className="flex-1 p-4 lg:p-8 bg-white border-b lg:border-b-0 lg:border-r border-slate-200">
+          <div className="max-w-4xl mx-auto h-full flex flex-col justify-center">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-brand-50 rounded-lg"><Building2 className="w-6 h-6 text-brand-600" /></div>
+              <h1 className="text-lg font-black text-slate-900 uppercase tracking-tighter italic">Infrastructure Setup</h1>
             </div>
 
             {successResult ? (
-              <div className="bg-emerald-500/10 border border-emerald-500/20 p-10 rounded shadow-2xl animate-in fade-in slide-in-from-left duration-700">
-                <div className="w-16 h-16 bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center mb-8 rounded-full">
-                  <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+              <div className="bg-emerald-50 border border-emerald-100 p-8 rounded-xl shadow-sm animate-in fade-in zoom-in duration-500 text-center">
+                <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
+                <h2 className="text-xl font-bold text-slate-900 mb-1">Organization Ready</h2>
+                <p className="text-xs text-slate-500 mb-6 font-mono">Infrastructure safely deployed on Supabase</p>
+                <div className="bg-white border border-emerald-200 p-6 rounded-lg relative overflow-hidden inline-block px-10">
+                    <span className="text-[10px] uppercase font-black text-slate-400 block mb-1">WORKSPACE ID</span>
+                    <span className="text-3xl font-mono font-black text-emerald-600 tracking-tighter">{successResult.id}</span>
                 </div>
-                <h2 className="text-2xl font-black text-white uppercase tracking-tight mb-2 font-outfit">Environment Ready</h2>
-                <p className="text-[10px] text-emerald-500 uppercase tracking-widest font-bold mb-8 font-mono">Infrastructure deployed successfully on Supabase</p>
-                
-                <div className="bg-black/40 border border-emerald-500/20 p-8 rounded relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500" />
-                    <span className="text-[9px] uppercase tracking-[0.3em] text-slate-500 block mb-2 font-black">Organization Account ID</span>
-                    <span className="text-4xl font-mono font-black text-emerald-400 tracking-tighter">{successResult.id}</span>
-                </div>
-                
-                <p className="text-[10px] text-slate-500 mt-8 font-bold leading-relaxed uppercase tracking-widest italic animate-pulse">
-                  Use the identifier {successResult.id} on the right side to enter your new workspace.
-                </p>
+                <p className="text-[10px] text-slate-500 mt-6 font-bold uppercase tracking-widest italic animate-pulse">Use this ID on the Right to enter.</p>
               </div>
             ) : (
-              <form onSubmit={handleRegister} className="space-y-10 pb-10">
-                
-                {regError && (
-                  <div className="p-4 bg-red-500/10 border-l-4 border-red-500 flex items-center gap-4 animate-in slide-in-from-top">
-                    <AlertCircle className="w-5 h-5 text-red-500" />
-                    <p className="text-[10px] text-red-200 uppercase font-black tracking-widest leading-relaxed">{regError}</p>
+              <form onSubmit={handleRegister} className="space-y-6">
+                {regError && <div className="p-3 bg-red-50 border-l-4 border-red-500 text-[10px] text-red-700 uppercase font-black tracking-widest">{regError}</div>}
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {/* Entity Data */}
+                  <div className="md:col-span-3 pb-1 border-b border-slate-100 flex items-center gap-2">
+                    <Database className="w-3 h-3 text-brand-600" /><span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Workspace Entity</span>
                   </div>
-                )}
+                  <input name="companyName" value={regData.companyName} onChange={x => setRegData(p=>({...p, companyName:x.target.value}))} className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded text-xs outline-none focus:ring-1 focus:ring-brand-500" placeholder="Legal Organization Name" />
+                  <input name="gst" value={regData.gst} onChange={x => setRegData(p=>({...p, gst:x.target.value}))} className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded text-xs outline-none focus:ring-1 focus:ring-brand-500" placeholder="GST Number" />
+                  <select name="state" value={regData.state} onChange={x => setRegData(p=>({...p, state:x.target.value}))} className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded text-xs text-slate-700">
+                    {["Maharashtra","Karnataka","Tamil Nadu","Gujarat","Delhi"].map(s=><option key={s} value={s}>{s}</option>)}
+                  </select>
+                  <select name="companyType" value={regData.companyType} onChange={x => setRegData(p=>({...p, companyType:x.target.value}))} className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded text-xs text-slate-700">
+                    <option>Garment Manufacturing</option><option>Textile Processing</option><option>Luxury Retail</option>
+                  </select>
+                  <select name="employeeCount" value={regData.employeeCount} onChange={x => setRegData(p=>({...p, employeeCount:x.target.value}))} className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded text-xs text-slate-700">
+                    <option>1-10 Workforce</option><option>11-50 Workforce</option><option>51-500 Workforce</option>
+                  </select>
+                  <input name="phone" value={regData.phone} onChange={x => setRegData(p=>({...p, phone:x.target.value}))} className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded text-xs" placeholder="Contact Phone" />
 
-                {/* Section 1: Corporate Entity */}
-                <div className="space-y-6">
-                  <h3 className="text-[10px] text-brand-400 font-black uppercase tracking-[0.5em] flex items-center gap-3 mb-6 pb-2 border-b border-white/5">
-                    <Database className="w-3 h-3"/> Workspace & Entity Details
-                  </h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="md:col-span-2 relative">
-                      <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-700" />
-                      <input name="companyName" value={regData.companyName} onChange={e => setRegData(p => ({ ...p, companyName: e.target.value }))} className="w-full bg-slate-950 border border-slate-800 p-4 pl-10 text-white text-xs placeholder:text-slate-800 focus:border-brand-500 outline-none transition-all" placeholder="Legal Organization Name" />
-                    </div>
-                    
-                    <div className="relative">
-                      <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-700" />
-                      <input name="gst" value={regData.gst} onChange={e => setRegData(p => ({ ...p, gst: e.target.value }))} className="w-full bg-slate-950 border border-slate-800 p-4 pl-10 text-white text-xs placeholder:text-slate-800 focus:border-brand-500 outline-none" placeholder="GST Number (Optional)" />
-                    </div>
-
-                    <select name="state" value={regData.state} onChange={e => setRegData(p => ({ ...p, state: e.target.value }))} className="w-full bg-slate-950 border border-slate-800 p-4 text-white text-xs appearance-none outline-none focus:border-brand-500">
-                      {["Maharashtra", "Karnataka", "Tamil Nadu", "Gujarat", "Delhi", "West Bengal", "Uttar Pradesh"].map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-
-                    <div className="relative">
-                       <select name="companyType" value={regData.companyType} onChange={e => setRegData(p => ({ ...p, companyType: e.target.value }))} className="w-full bg-slate-950 border border-slate-800 p-4 text-white text-xs appearance-none outline-none focus:border-brand-500">
-                          <option value="Garment Manufacturing">Garment Manufacturing</option>
-                          <option value="Textile Processing">Textile Processing</option>
-                          <option value="Luxury Retail">Luxury Retail</option>
-                       </select>
-                    </div>
-
-                    <div className="relative">
-                       <select name="employeeCount" value={regData.employeeCount} onChange={e => setRegData(p => ({ ...p, employeeCount: e.target.value }))} className="w-full bg-slate-950 border border-slate-800 p-4 text-white text-xs appearance-none outline-none focus:border-brand-500">
-                          <option value="1-10">1-10 Workforce</option>
-                          <option value="11-50">11-50 Workforce</option>
-                          <option value="51-500">51-500 Workforce</option>
-                       </select>
-                    </div>
+                  {/* Identity Data */}
+                  <div className="md:col-span-3 pt-2 pb-1 border-b border-slate-100 flex items-center gap-2">
+                    <ShieldCheck className="w-3 h-3 text-brand-600" /><span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Access Credentials</span>
                   </div>
-                </div>
+                  <input name="username" value={regData.username} onChange={x => setRegData(p=>({...p, username:x.target.value}))} className="w-full bg-brand-50 border border-brand-100 p-2.5 rounded text-xs text-brand-700 font-bold" placeholder="CHOOSE LOGIN ID" />
+                  <div className="relative">
+                    <input type={showRegPin?'text':'password'} value={regData.pin} onChange={x => setRegData(p=>({...p, pin:x.target.value.replace(/\D/g,'').slice(0,6)}))} className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded text-xs text-center font-mono tracking-widest" placeholder="PIN CODE" />
+                    <button type="button" onClick={()=>setShowRegPin(!showRegPin)} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 focus:outline-none">{showRegPin?<EyeOff size={14}/>:<Eye size={14}/>}</button>
+                  </div>
+                  <input name="adminName" value={regData.adminName} onChange={x => setRegData(p=>({...p, adminName:x.target.value}))} className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded text-xs" placeholder="Admin Full Name" />
+                  <input type="date" name="dob" value={regData.dob} onChange={x => setRegData(p=>({...p, dob:x.target.value}))} className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded text-xs font-mono" />
+                  <input name="email" value={regData.email} onChange={x => setRegData(p=>({...p, email:x.target.value}))} className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded text-xs md:col-span-2" placeholder="Corporate Email Address" />
 
-                {/* Section 2: Unified Identity */}
-                <div className="space-y-6">
-                  <h3 className="text-[10px] text-brand-400 font-black uppercase tracking-[0.5em] flex items-center gap-3 mb-6 pb-2 border-b border-white/5">
-                    <ShieldCheck className="w-3 h-3"/> Identity & Access
-                  </h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="relative">
-                       <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-500/40" />
-                       <input name="username" value={regData.username} onChange={e => setRegData(p => ({ ...p, username: e.target.value }))} className="w-full bg-brand-500/5 border border-brand-500/20 p-4 pl-10 text-white text-xs placeholder:text-brand-500/20 focus:border-brand-500 outline-none font-bold tracking-widest" placeholder="CHOOSE LOGIN ID" />
+                  {/* Attendance Data */}
+                  <div className="md:col-span-3 pt-2 pb-1 border-b border-slate-100 flex items-center gap-2">
+                    <MapPin className="w-3 h-3 text-brand-600" /><span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Operational Environment</span>
+                  </div>
+                  <div className="md:col-span-2 flex gap-2">
+                    <div className="flex-1 bg-slate-50 border border-slate-200 p-2.5 rounded text-[10px] text-slate-400 font-mono flex items-center justify-between">
+                      <span>{regData.baseLat || '0.000'} | {regData.baseLng || '0.000'}</span>
+                      <Navigation size={12} className={regData.baseLat ? 'text-emerald-500' : 'text-slate-300'} />
                     </div>
-                    
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-700" />
-                      <input 
-                        type={showRegPin ? 'text' : 'password'} 
-                        value={regData.pin} 
-                        onChange={e => setRegData(p => ({ ...p, pin: e.target.value.replace(/\D/g, '').slice(0, 6) }))} 
-                        className="w-full bg-slate-950 border border-slate-800 p-4 pl-10 text-white font-mono text-center text-lg tracking-[0.4em] outline-none focus:border-brand-500" 
-                        placeholder="SECURITY PIN" 
-                      />
-                      <button type="button" onClick={() => setShowRegPin(!showRegPin)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-700">
-                        {showRegPin ? <EyeOff className="w-4 h-4"/> : <Eye className="w-4 h-4"/>}
-                      </button>
-                    </div>
-
-                    <div className="relative">
-                      <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-700" />
-                      <input name="adminName" value={regData.adminName} onChange={e => setRegData(p => ({ ...p, adminName: e.target.value }))} className="w-full bg-slate-950 border border-slate-800 p-4 pl-10 text-white text-xs placeholder:text-slate-800 outline-none focus:border-brand-500" placeholder="Administrator Name" />
-                    </div>
-
-                    <div className="relative">
-                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-700" />
-                      <input type="date" name="dob" value={regData.dob} onChange={e => setRegData(p => ({ ...p, dob: e.target.value }))} className="w-full bg-slate-950 border border-slate-800 p-4 pl-10 text-white text-xs placeholder:text-slate-800 outline-none focus:border-brand-500 uppercase font-mono" />
-                    </div>
-
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-700" />
-                      <input name="email" value={regData.email} onChange={e => setRegData(p => ({ ...p, email: e.target.value }))} className="w-full bg-slate-950 border border-slate-800 p-4 pl-10 text-white text-xs placeholder:text-slate-800 outline-none focus:border-brand-500" placeholder="Contact Email ID" />
-                    </div>
-
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-700" />
-                      <input name="phone" value={regData.phone} onChange={e => setRegData(p => ({ ...p, phone: e.target.value }))} className="w-full bg-slate-950 border border-slate-800 p-4 pl-10 text-white text-xs placeholder:text-slate-800 outline-none focus:border-brand-500" placeholder="Phone Number" />
-                    </div>
+                    <button type="button" onClick={captureGPS} className="px-4 bg-slate-800 text-white rounded text-[9px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all">Pin HQ</button>
+                  </div>
+                  <div className="flex gap-2 items-center">
+                    <div className="flex-1"><label className="text-[8px] text-slate-400 block uppercase font-bold">Shift Start</label><input type="time" value={regData.shiftStartTime} onChange={x=>setRegData(p=>({...p, shiftStartTime:x.target.value}))} className="w-full bg-slate-50 border border-slate-200 p-1 rounded text-xs" /></div>
+                    <div className="flex-1"><label className="text-[8px] text-slate-400 block uppercase font-bold">Grace (min)</label><input type="number" value={regData.gracePeriod} onChange={x=>setRegData(p=>({...p, gracePeriod:x.target.value}))} className="w-full bg-slate-50 border border-slate-200 p-1 rounded text-xs" /></div>
                   </div>
                 </div>
 
-                {/* Section 3: Attendance Rules */}
-                <div className="space-y-6">
-                  <h3 className="text-[10px] text-brand-400 font-black uppercase tracking-[0.5em] flex items-center gap-3 mb-6 pb-2 border-b border-white/5">
-                    <MapPin className="w-3 h-3"/> Workforce Geofencing
-                  </h3>
-                  
-                  <div className="p-6 bg-slate-950 border border-slate-800 rounded relative group">
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div className="space-y-1">
-                        <label className="text-[8px] text-slate-600 font-black uppercase tracking-widest ml-1">Latitude</label>
-                        <input readOnly value={regData.baseLat} className="w-full bg-black/40 border border-slate-800 p-3 text-[10px] text-slate-500 font-mono" placeholder="00.000000" />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[8px] text-slate-600 font-black uppercase tracking-widest ml-1">Longitude</label>
-                        <input readOnly value={regData.baseLng} className="w-full bg-black/40 border border-slate-800 p-3 text-[10px] text-slate-500 font-mono" placeholder="00.000000" />
-                      </div>
-                    </div>
-                    <button type="button" onClick={captureGPS} className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-brand-400 text-[10px] font-black uppercase tracking-[0.4em] border border-slate-700 flex items-center justify-center gap-4 transition-all">
-                      <Navigation className="w-4 h-4 animate-pulse"/> PIN HEADQUARTERS
-                    </button>
-                    <p className="text-[9px] text-slate-600 mt-4 italic text-center font-bold uppercase tracking-wide">Employees must be within 100m of this point to clock-in.</p>
+                <div className="flex flex-col md:flex-row gap-4 items-center pt-2">
+                  <div className="flex-1 flex gap-2">
+                    <input value={userCaptcha} onChange={x=>setUserCaptcha(x.target.value)} className="flex-1 bg-slate-50 border border-slate-200 p-2.5 rounded text-center text-sm font-black" placeholder={`${captcha.q} = ?`} />
+                    <button type="button" onClick={generateCaptcha} className="px-4 text-slate-300"><RefreshCw size={14}/></button>
                   </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                     <div className="space-y-2">
-                        <label className="text-[9px] text-slate-500 font-black uppercase tracking-widest ml-1">Daily Shift Commencement</label>
-                        <div className="relative">
-                          <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-700" />
-                          <input type="time" name="shiftStartTime" value={regData.shiftStartTime} onChange={e => setRegData(p => ({ ...p, shiftStartTime: e.target.value }))} className="w-full bg-slate-950 border border-slate-800 p-4 pl-10 text-white text-xs outline-none focus:border-brand-500" />
-                        </div>
-                     </div>
-                     <div className="space-y-2">
-                        <label className="text-[9px] text-slate-500 font-black uppercase tracking-widest ml-1">Lateness Grace (Mins)</label>
-                        <input type="number" name="gracePeriod" value={regData.gracePeriod} onChange={e => setRegData(p => ({ ...p, gracePeriod: e.target.value }))} className="w-full bg-slate-950 border border-slate-800 p-4 text-white text-xs outline-none focus:border-brand-500" placeholder="15" />
-                     </div>
-                  </div>
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <input type="checkbox" checked={regData.termsAccepted} onChange={x=>setRegData(p=>({...p, termsAccepted:x.target.checked}))} className="w-5 h-5 rounded border-slate-300 text-brand-600 focus:ring-0" />
+                    <span className="text-[9px] text-slate-500 font-bold uppercase leading-tight tracking-tight">Accept strict geofencing isolation protocols</span>
+                  </label>
                 </div>
 
-                {/* Confirmations */}
-                <div className="space-y-6 pt-10 border-t border-white/5">
-                   <div className="flex gap-2">
-                      <input value={userCaptcha} onChange={e => setUserCaptcha(e.target.value)} className="flex-1 bg-slate-950 border border-slate-800 p-5 text-white text-lg font-black text-center tracking-[0.2em]" placeholder={`${captcha.q} = ?`} />
-                      <button type="button" onClick={generateCaptcha} className="px-8 bg-slate-800 text-slate-600 hover:text-white transition-colors"><RefreshCw className="w-5 h-5"/></button>
-                   </div>
-                   
-                   <label className="flex items-start gap-4 cursor-pointer group bg-black/20 p-6 rounded border border-white/5">
-                      <input type="checkbox" checked={regData.termsAccepted} onChange={e => setRegData(p => ({ ...p, termsAccepted: e.target.checked }))} className="mt-1 w-6 h-6 rounded-none bg-slate-950 border-slate-800 text-brand-500 focus:ring-0" />
-                      <span className="text-[10px] text-slate-500 uppercase tracking-tight font-black leading-relaxed group-hover:text-slate-300 transition-colors">
-                        Deploy Organization into the Ironclad Network. I acknowledge that GPS isolation and strict shift compliance will be active from the moment of deployment for all personnel.
-                      </span>
-                   </label>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isRegistering}
-                  className="w-full py-7 bg-brand-500 hover:bg-brand-600 disabled:opacity-50 transition-all font-black text-white uppercase tracking-[0.6em] text-sm flex items-center justify-center gap-6 shadow-[0_0_50px_rgba(45,124,246,0.3)] active:scale-95 group/btn"
-                >
-                  {isRegistering ? <Loader2 className="w-6 h-6 animate-spin"/> : <>DEPLOY INFRASTRUCTURE <ShieldCheck className="w-6 h-6 group-hover/btn:scale-110 transition-transform"/></>}
+                <button type="submit" disabled={isRegistering} className="w-full py-4 bg-brand-600 hover:bg-brand-700 text-white font-black uppercase tracking-[0.4em] text-xs rounded transition-all shadow-md active:scale-[0.99] flex items-center justify-center gap-3">
+                  {isRegistering ? <Loader2 size={16} className="animate-spin"/> : <>Confirm Setup <ShieldCheck size={16}/></>}
                 </button>
               </form>
             )}
           </div>
         </div>
 
-        {/* ─── VERTICAL DIVIDER ─────────────────────────────────────────── */}
-        <div className="hidden lg:flex flex-col items-center justify-center absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none">
-           <div className="w-[1px] h-64 bg-gradient-to-t from-transparent via-slate-700 to-transparent" />
-           <div className="w-14 h-14 bg-slate-950 border border-slate-700 rounded-full flex items-center justify-center text-[11px] font-black text-slate-500 tracking-[0.3em] my-4 backdrop-blur-md">OR</div>
-           <div className="w-[1px] h-64 bg-gradient-to-b from-transparent via-slate-700 to-transparent" />
-        </div>
-
         {/* ─── RIGHT: LOGIN ─────────────────────────────────────────────── */}
-        <div className="flex-1 p-8 lg:p-20 bg-black/40 relative flex flex-col justify-center">
-          
-          <div className="max-w-md mx-auto w-full">
-             <div className="flex flex-col items-center text-center mb-16">
-               <div className="w-20 h-20 bg-brand-500/5 border border-brand-500/10 flex items-center justify-center mb-6 rounded-3xl rotate-45 group hover:rotate-0 transition-all duration-700">
-                 <div className="-rotate-45 group-hover:rotate-0 transition-all duration-700">
-                    <ShieldCheck className="w-10 h-10 text-brand-400" />
-                 </div>
-               </div>
-               <h1 className="text-2xl font-black text-white uppercase tracking-tighter font-outfit">Unified Access Portal</h1>
-               <p className="text-[10px] text-slate-600 uppercase tracking-widest font-black mt-2">Personnel Authentication Protocol v2</p>
+        <div className="lg:w-[450px] p-6 lg:p-12 bg-white flex flex-col justify-center">
+          <div className="max-w-sm mx-auto w-full">
+             <div className="text-center mb-8">
+               <div className="w-12 h-12 bg-brand-50 border border-brand-100 flex items-center justify-center mx-auto mb-3 rounded-lg"><ShieldCheck size={24} className="text-brand-600" /></div>
+               <h1 className="text-xl font-black text-slate-900 tracking-tighter uppercase italic">Unified Portal</h1>
+               <p className="text-[9px] text-slate-400 uppercase tracking-widest font-bold mt-1">Identity Access Hub v2.2</p>
              </div>
 
-             <form onSubmit={handleLogin} className="space-y-8">
-                {loginError && (
-                  <div className="p-5 bg-red-500/10 border border-red-500/20 flex items-center gap-5 animate-in slide-in-from-top">
-                    <AlertCircle className="w-6 h-6 text-red-500 shrink-0" />
-                    <p className="text-[10px] text-red-400 uppercase font-black tracking-widest leading-relaxed">{loginError}</p>
-                  </div>
-                )}
-
-                <div className="space-y-5">
-                  <div className="space-y-2">
-                    <label className="text-[9px] text-slate-600 font-black uppercase tracking-[0.4em] ml-1">Workspace Identity</label>
-                    <div className="relative group">
-                      <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-700 group-focus-within:text-brand-500 transition-colors" />
-                      <input 
-                        value={loginData.tenantId} 
-                        onChange={e => setLoginData(p => ({ ...p, tenantId: e.target.value }))} 
-                        className="w-full bg-slate-950 border border-slate-800 p-4 pl-12 text-white font-mono text-sm tracking-widest focus:border-brand-500 outline-none transition-all" 
-                        placeholder="Organization ID" 
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[9px] text-slate-600 font-black uppercase tracking-[0.4em] ml-1">User Credentials</label>
-                    <div className="relative group">
-                      <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-700 group-focus-within:text-brand-500 transition-colors" />
-                      <input 
-                        value={loginData.username} 
-                        onChange={e => setLoginData(p => ({ ...p, username: e.target.value }))} 
-                        className="w-full bg-slate-950 border border-slate-800 p-4 pl-12 text-white text-sm focus:border-brand-500 outline-none transition-all font-bold" 
-                        placeholder="Authenticated Username" 
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[9px] text-slate-600 font-black uppercase tracking-[0.4em] ml-1">Security PIN</label>
-                    <div className="relative group">
-                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-700 group-focus-within:text-brand-500 transition-colors" />
-                      <input 
-                        type={showLoginPin ? 'text' : 'password'} 
-                        readOnly 
-                        value={loginData.pin} 
-                        className="w-full bg-slate-950 border border-slate-800 p-4 pl-12 text-white font-mono text-center text-3xl tracking-[0.8em] focus:border-brand-500 outline-none transition-all" 
-                        placeholder="••••••" 
-                      />
-                      <button type="button" onClick={() => setShowLoginPin(!showLoginPin)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-700 hover:text-white transition-colors">
-                        {showLoginPin ? <EyeOff className="w-5 h-5"/> : <Eye className="w-5 h-5"/>}
-                      </button>
-                    </div>
+             <form onSubmit={handleLogin} className="space-y-4">
+                {loginError && <div className="p-2.5 bg-red-50 border-l-2 border-red-500 text-[9px] text-red-600 uppercase font-black">{loginError}</div>}
+                
+                <div className="space-y-1">
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1">Workspace ID</span>
+                  <div className="relative">
+                     <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-300" />
+                     <input value={loginData.tenantId} onChange={x=>setLoginData(p=>({...p, tenantId:x.target.value}))} className="w-full bg-slate-50 border border-slate-200 p-2.5 pl-10 rounded text-xs font-mono" placeholder="Tenant Identification Code" />
                   </div>
                 </div>
 
-                {/* Pin Pad */}
-                <div className="grid grid-cols-3 gap-3 pt-4">
-                  {[1,2,3,4,5,6,7,8,9].map(n => (
-                    <button key={n} type="button" onClick={() => handlePinPad(n.toString())} className="h-16 bg-slate-900/40 border border-slate-800 text-white font-black hover:bg-slate-800 hover:border-slate-600 active:scale-95 transition-all duration-75 text-xl font-mono">{n}</button>
-                  ))}
-                  <button type="button" onClick={() => setLoginData(p => ({ ...p, pin: '' }))} className="h-16 bg-slate-950 border border-slate-800 text-slate-600 text-[11px] font-black tracking-[0.2em] hover:text-white transition-colors uppercase font-mono">CLR</button>
-                  <button type="button" onClick={() => handlePinPad('0')} className="h-16 bg-slate-900/40 border border-slate-800 text-white font-black hover:bg-slate-800 transition-all text-xl font-mono">0</button>
-                  <button type="button" onClick={() => setLoginData(p => ({ ...p, pin: p.pin.slice(0, -1) }))} className="h-16 bg-slate-950 border border-slate-800 text-slate-600 flex items-center justify-center hover:text-white transition-colors"><Delete className="w-6 h-6"/></button>
+                <div className="space-y-1">
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1">User Identifier</span>
+                  <div className="relative">
+                     <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-300" />
+                     <input value={loginData.username} onChange={x=>setLoginData(p=>({...p, username:x.target.value}))} className="w-full bg-slate-50 border border-slate-200 p-2.5 pl-10 rounded text-xs font-bold" placeholder="Username" />
+                  </div>
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={isLoggingIn}
-                  className="w-full py-7 bg-brand-500 hover:bg-brand-600 disabled:opacity-50 transition-all font-black text-white uppercase tracking-[0.5em] text-sm flex items-center justify-center gap-6 shadow-[0_0_60px_rgba(45,124,246,0.2)] mt-10 active:scale-[0.98] group/loginbtn"
-                >
-                  {isLoggingIn ? <Loader2 className="w-7 h-7 animate-spin"/> : <>INITIATE SECURE SESSION <ShieldCheck className="w-7 h-7 group-hover/loginbtn:scale-110 transition-transform"/></>}
+                <div className="space-y-1">
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1">Secure PIN</span>
+                  <div className="relative">
+                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-300" />
+                     <input type={showLoginPin?'text':'password'} readOnly value={loginData.pin} className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded text-center font-mono text-xl tracking-[0.4em]" placeholder="••••••" />
+                     <button type="button" onClick={()=>setShowLoginPin(!showLoginPin)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500">{showLoginPin?<EyeOff size={16}/>:<Eye size={16}/>}</button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-1.5 pt-2">
+                  {[1,2,3,4,5,6,7,8,9].map(n=><button key={n} type="button" onClick={()=>loginData.pin.length<6 && setLoginData(p=>({...p, pin:p.pin+n}))} className="h-10 bg-slate-50 border border-slate-200 text-slate-600 font-bold hover:bg-slate-100 active:scale-95 text-sm">{n}</button>)}
+                  <button type="button" onClick={()=>setLoginData(p=>({...p, pin:''}))} className="h-10 bg-slate-100 text-slate-400 text-[8px] font-black">CLR</button>
+                  <button type="button" onClick={()=>loginData.pin.length<6 && setLoginData(p=>({...p, pin:p.pin+'0'}))} className="h-10 bg-slate-50 border border-slate-200 text-slate-600 font-bold hover:bg-slate-100">0</button>
+                  <button type="button" onClick={()=>setLoginData(p=>({...p, pin:p.pin.slice(0,-1)}))} className="h-10 bg-slate-100 text-slate-400 flex items-center justify-center"><Delete size={14}/></button>
+                </div>
+
+                <button type="submit" disabled={isLoggingIn} className="w-full py-4 bg-brand-600 hover:bg-brand-700 text-white font-black uppercase tracking-[0.4em] text-xs rounded transition-all mt-4 flex items-center justify-center gap-3">
+                   {isLoggingIn ? <Loader2 size={16} className="animate-spin"/> : <>Access Workspace <ShieldCheck size={16}/></>}
                 </button>
              </form>
           </div>
-
         </div>
 
       </div>
-
-      <style>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(45,124,246,0.2); border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(45,124,246,0.4); }
-      `}</style>
+      
+      <div className="py-6 text-center border-t border-slate-100 bg-white">
+        <p className="text-[10px] text-slate-400 font-black tracking-[0.8em] uppercase">HRMSCore Unified Architecture</p>
+      </div>
 
     </div>
   );
