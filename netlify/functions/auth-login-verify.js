@@ -1,8 +1,8 @@
 import { verifyAuthenticationResponse } from '@simplewebauthn/server';
 import { MongoClient } from 'mongodb';
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://vnkt045_db_user:byU6RBdx6BMHrW6f@159.41.197.69:27017/hrmscore?ssl=true&authSource=admin&directConnection=true&retryWrites=true&w=majority&appName=Cluster0';
-const DB_NAME = process.env.MONGODB_DB || 'hrmscore';
+const MONGODB_URI = 'mongodb://vnkt045_db_user:byU6RBdx6BMHrW6f@159.41.197.69:27017/hrmscore?ssl=true&authSource=admin&directConnection=true&retryWrites=true&w=majority&appName=Cluster0';
+const DB_NAME = 'hrmscore';
 const Origin = process.env.URL || 'http://localhost:5173';
 const RP_ID = new URL(Origin).hostname;
 

@@ -3,9 +3,9 @@
 
 import { MongoClient, ObjectId } from 'mongodb';
 
-const MONGODB_URI = process.env.MONGODB_URI || 
-  "mongodb://vnkt045_db_user:byU6RBdx6BMHrW6f@159.41.197.69:27017/hrmscore?ssl=true&authSource=admin&directConnection=true&retryWrites=true&w=majority&appName=Cluster0";
-const DB_NAME = process.env.MONGODB_DB || "hrmscore";
+// FORCE OVERRIDE: Ignore Environment Variables for now to solve the timeout issue
+const MONGODB_URI = "mongodb://vnkt045_db_user:byU6RBdx6BMHrW6f@159.41.197.69:27017/hrmscore?ssl=true&authSource=admin&directConnection=true&retryWrites=true&w=majority&appName=Cluster0";
+const DB_NAME = "hrmscore";
 
 const ALLOWED_COLLECTIONS = new Set([
   'users', 'products', 'assignments', 'worklogs', 'dispatches', 'leaves',
