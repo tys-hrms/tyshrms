@@ -137,33 +137,33 @@ export default function AuthPortal() {
                   </div>
                   <div className="space-y-1">
                     <label className="text-[8px] text-slate-400 font-black uppercase tracking-widest ml-1">Company Name</label>
-                    <input name="name" value={regData.name} onChange={x => setRegData(p=>({...p, name:x.target.value}))} className="w-full bg-white border border-slate-200 p-2 text-xs outline-none focus:ring-1 focus:ring-brand-500 rounded shadow-sm" placeholder="Legal Organization Name" />
+                    <input name="name" value={regData.name} onChange={x => setRegData(p=>({...p, name:x.target.value}))} className="w-full bg-white border border-slate-200 p-2 text-xs text-slate-900 font-bold outline-none focus:ring-1 focus:ring-brand-500 rounded shadow-sm placeholder:text-slate-400" placeholder="Legal Organization Name" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[8px] text-slate-400 font-black uppercase tracking-widest ml-1">GST Identification</label>
-                    <input name="gst" value={regData.gst} onChange={x => setRegData(p=>({...p, gst:x.target.value}))} className="w-full bg-white border border-slate-200 p-2 text-xs outline-none focus:ring-1 focus:ring-brand-500 rounded shadow-sm" placeholder="GST Number" />
+                    <input name="gst" value={regData.gst} onChange={x => setRegData(p=>({...p, gst:x.target.value}))} className="w-full bg-white border border-slate-200 p-2 text-xs text-slate-900 font-bold outline-none focus:ring-1 focus:ring-brand-500 rounded shadow-sm placeholder:text-slate-400" placeholder="GST Number" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[8px] text-slate-400 font-black uppercase tracking-widest ml-1">Operations Base</label>
-                    <select name="state" value={regData.state} onChange={x => setRegData(p=>({...p, state:x.target.value}))} className="w-full bg-white border border-slate-200 p-2 text-xs text-slate-700 rounded shadow-sm appearance-none">
+                    <select name="state" value={regData.state} onChange={x => setRegData(p=>({...p, state:x.target.value}))} className="w-full bg-white border border-slate-200 p-2 text-xs text-slate-900 font-bold rounded shadow-sm appearance-none">
                       {states.map(s=><option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
                   <div className="space-y-1">
                     <label className="text-[8px] text-slate-400 font-black uppercase tracking-widest ml-1">Industry Segment</label>
-                    <select name="company_type" value={regData.company_type} onChange={x => setRegData(p=>({...p, company_type:x.target.value}))} className="w-full bg-white border border-slate-200 p-2 text-xs text-slate-700 rounded shadow-sm appearance-none">
+                    <select name="company_type" value={regData.company_type} onChange={x => setRegData(p=>({...p, company_type:x.target.value}))} className="w-full bg-white border border-slate-200 p-2 text-xs text-slate-900 font-bold rounded shadow-sm appearance-none">
                       {segments.map(s=><option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
                   <div className="space-y-1">
                     <label className="text-[8px] text-slate-400 font-black uppercase tracking-widest ml-1">Workforce Size</label>
-                    <select name="employee_count" value={regData.employee_count} onChange={x => setRegData(p=>({...p, employee_count:x.target.value}))} className="w-full bg-white border border-slate-200 p-2 text-xs text-slate-700 rounded shadow-sm">
+                    <select name="employee_count" value={regData.employee_count} onChange={x => setRegData(p=>({...p, employee_count:x.target.value}))} className="w-full bg-white border border-slate-200 p-2 text-xs text-slate-900 font-bold rounded shadow-sm">
                       <option value="1-10">1-10 Employees</option><option value="11-50">11-50 Employees</option><option value="51-200">51-200 Employees</option><option value="201+">201+ Employees</option>
                     </select>
                   </div>
                   <div className="space-y-1">
                     <label className="text-[8px] text-slate-400 font-black uppercase tracking-widest ml-1">Contact Number</label>
-                    <input name="phone" value={regData.phone} onChange={x => setRegData(p=>({...p, phone:x.target.value}))} className="w-full bg-white border border-slate-200 p-2 text-xs rounded shadow-sm" placeholder="Phone Number" />
+                    <input name="phone" value={regData.phone} onChange={x => setRegData(p=>({...p, phone:x.target.value}))} className="w-full bg-white border border-slate-200 p-2 text-xs text-slate-900 font-bold rounded shadow-sm placeholder:text-slate-400" placeholder="Phone Number" />
                   </div>
 
                   <div className="md:col-span-3 pt-1 pb-1 border-b border-slate-200 flex items-center gap-2">
@@ -171,26 +171,26 @@ export default function AuthPortal() {
                   </div>
                   <div className="space-y-1">
                     <label className="text-[8px] text-slate-400 font-black uppercase tracking-widest ml-1">Login Username</label>
-                    <input name="username" value={regData.username} onChange={x => setRegData(p=>({...p, username:x.target.value}))} className="w-full bg-brand-50 border border-brand-100 p-2 text-xs text-brand-700 font-bold rounded shadow-sm" placeholder="CHOOSE USERNAME" />
+                    <input name="username" value={regData.username} onChange={x => setRegData(p=>({...p, username:x.target.value}))} className="w-full bg-brand-50 border border-brand-100 p-2 text-xs text-brand-700 font-bold rounded shadow-sm placeholder:text-brand-300" placeholder="CHOOSE USERNAME" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[8px] text-slate-400 font-black uppercase tracking-widest ml-1">Access PIN</label>
                     <div className="relative">
-                      <input type={showRegPin?'text':'password'} value={regData.pin_code} onChange={x => setRegData(p=>({...p, pin_code:x.target.value.replace(/\D/g,'').slice(0,6)}))} className="w-full bg-white border border-slate-200 p-2 text-xs text-center font-mono tracking-widest rounded shadow-sm" placeholder="6X PIN" />
+                      <input type={showRegPin?'text':'password'} value={regData.pin_code} onChange={x => setRegData(p=>({...p, pin_code:x.target.value.replace(/\D/g,'').slice(0,6)}))} className="w-full bg-white border border-slate-200 p-2 text-xs text-center text-slate-900 font-mono tracking-widest rounded shadow-sm placeholder:text-slate-400" placeholder="6X PIN" />
                       <button type="button" onClick={()=>setShowRegPin(!showRegPin)} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 focus:outline-none">{showRegPin?<EyeOff size={12}/>:<Eye size={12}/>}</button>
                     </div>
                   </div>
                   <div className="space-y-1">
                     <label className="text-[8px] text-slate-400 font-black uppercase tracking-widest ml-1">Administrator Name</label>
-                    <input name="admin_name" value={regData.admin_name} onChange={x => setRegData(p=>({...p, admin_name:x.target.value}))} className="w-full bg-white border border-slate-200 p-2 text-xs rounded shadow-sm" placeholder="Full Name" />
+                    <input name="admin_name" value={regData.admin_name} onChange={x => setRegData(p=>({...p, admin_name:x.target.value}))} className="w-full bg-white border border-slate-200 p-2 text-xs text-slate-900 font-bold rounded shadow-sm placeholder:text-slate-400" placeholder="Full Name" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[8px] text-slate-400 font-black uppercase tracking-widest ml-1">Date of Birth</label>
-                    <input type="date" name="dob" value={regData.dob} onChange={x => setRegData(p=>({...p, dob:x.target.value}))} className="w-full bg-white border border-slate-200 p-2 text-xs font-mono rounded shadow-sm" />
+                    <input type="date" name="dob" value={regData.dob} onChange={x => setRegData(p=>({...p, dob:x.target.value}))} className="w-full bg-white border border-slate-200 p-2 text-xs text-slate-900 font-mono rounded shadow-sm" />
                   </div>
                   <div className="space-y-1 md:col-span-2">
                     <label className="text-[8px] text-slate-400 font-black uppercase tracking-widest ml-1">Email Address</label>
-                    <input name="email" value={regData.email} onChange={x => setRegData(p=>({...p, email:x.target.value}))} className="w-full bg-white border border-slate-200 p-2 text-xs rounded shadow-sm" placeholder="admin@company.com" />
+                    <input name="email" value={regData.email} onChange={x => setRegData(p=>({...p, email:x.target.value}))} className="w-full bg-white border border-slate-200 p-2 text-xs text-slate-900 font-bold rounded shadow-sm placeholder:text-slate-400" placeholder="admin@company.com" />
                   </div>
 
                   <div className="md:col-span-3 pt-1 pb-1 border-b border-slate-200 flex items-center gap-2">
@@ -198,20 +198,20 @@ export default function AuthPortal() {
                   </div>
                   <div className="md:col-span-2 flex gap-2 pt-1">
                     <div className="flex-1 bg-slate-100 border border-slate-200 p-2 rounded text-[9px] text-slate-500 font-mono flex items-center justify-between">
-                      <span>{regData.baseLat || '0.000'} | {regData.baseLng || '0.000'}</span>
+                      <span className="text-slate-900 font-bold">{regData.baseLat || '0.000'} | {regData.baseLng || '0.000'}</span>
                       <Navigation size={10} className={regData.baseLat ? 'text-emerald-500' : 'text-slate-300'} />
                     </div>
                     <button type="button" onClick={captureGPS} className="px-3 bg-slate-900 text-white rounded text-[8px] font-black uppercase tracking-widest hover:bg-black transition-all shadow-sm">Pin HQ</button>
                   </div>
                   <div className="flex gap-2 items-center pt-1 md:col-span-1">
-                    <div className="flex-1"><label className="text-[7px] text-slate-400 block uppercase font-black">Shift Start</label><input type="time" value={regData.shift_start_time} onChange={x=>setRegData(p=>({...p, shift_start_time:x.target.value}))} className="w-full bg-white border border-slate-200 p-1 rounded text-[10px]" /></div>
-                    <div className="flex-1"><label className="text-[7px] text-slate-400 block uppercase font-black">Grace (m)</label><input type="number" value={regData.grace_period_mins} onChange={x=>setRegData(p=>({...p, grace_period_mins:x.target.value}))} className="w-full bg-white border border-slate-200 p-1 rounded text-[10px]" /></div>
+                    <div className="flex-1"><label className="text-[7px] text-slate-400 block uppercase font-black">Shift Start</label><input type="time" value={regData.shift_start_time} onChange={x=>setRegData(p=>({...p, shift_start_time:x.target.value}))} className="w-full bg-white border border-slate-200 p-1 rounded text-[10px] text-slate-900 font-bold" /></div>
+                    <div className="flex-1"><label className="text-[7px] text-slate-400 block uppercase font-black">Grace (m)</label><input type="number" value={regData.grace_period_mins} onChange={x=>setRegData(p=>({...p, grace_period_mins:x.target.value}))} className="w-full bg-white border border-slate-200 p-1 rounded text-[10px] text-slate-900 font-bold" /></div>
                   </div>
                 </div>
 
                 <div className="flex flex-col md:flex-row gap-3 items-center pt-2">
                   <div className="flex-1 flex gap-2 w-full md:w-auto">
-                    <input value={userCaptcha} onChange={x=>setUserCaptcha(x.target.value)} className="flex-1 bg-white border border-slate-200 p-2 rounded text-center text-xs font-black shadow-sm" placeholder={`${captcha.q} = ?`} />
+                    <input value={userCaptcha} onChange={x=>setUserCaptcha(x.target.value)} className="flex-1 bg-white border border-slate-200 p-2 rounded text-center text-xs font-black text-slate-900 shadow-sm placeholder:text-slate-400" placeholder={`${captcha.q} = ?`} />
                     <button type="button" onClick={generateCaptcha} className="px-2 text-slate-300 hover:text-slate-500 transition-colors"><RefreshCw size={12}/></button>
                   </div>
                   <label className="flex items-center gap-2 cursor-pointer group p-1">
@@ -245,7 +245,7 @@ export default function AuthPortal() {
                   <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1">Workspace ID</span>
                   <div className="relative">
                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-300" />
-                     <input value={loginData.tenantId} onChange={x=>setLoginData(p=>({...p, tenantId:x.target.value}))} className="w-full bg-slate-50 border border-slate-200 p-2.5 pl-9 rounded text-xs font-mono shadow-inner outline-none focus:border-brand-500 transition-all" placeholder="Enter Tenant ID" />
+                     <input value={loginData.tenantId} onChange={x=>setLoginData(p=>({...p, tenantId:x.target.value}))} className="w-full bg-slate-50 border border-slate-200 p-2.5 pl-9 rounded text-xs text-slate-900 font-bold shadow-inner outline-none focus:border-brand-500 transition-all placeholder:text-slate-400" placeholder="Enter Tenant ID" />
                   </div>
                 </div>
 
@@ -253,7 +253,7 @@ export default function AuthPortal() {
                   <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1">User Identifier</span>
                   <div className="relative">
                      <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-300" />
-                     <input value={loginData.username} onChange={x=>setLoginData(p=>({...p, username:x.target.value}))} className="w-full bg-slate-50 border border-slate-200 p-2.5 pl-9 rounded text-xs font-bold shadow-inner outline-none focus:border-brand-500 transition-all" placeholder="Login Username" />
+                     <input value={loginData.username} onChange={x=>setLoginData(p=>({...p, username:x.target.value}))} className="w-full bg-slate-50 border border-slate-200 p-2.5 pl-9 rounded text-xs text-slate-900 font-bold shadow-inner outline-none focus:border-brand-500 transition-all placeholder:text-slate-400" placeholder="Login Username" />
                   </div>
                 </div>
 
@@ -261,15 +261,15 @@ export default function AuthPortal() {
                   <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1">Secure Access PIN</span>
                   <div className="relative">
                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-300" />
-                     <input type={showLoginPin?'text':'password'} readOnly value={loginData.pin} className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded text-center font-mono text-xl tracking-[0.4em] shadow-inner" placeholder="••••••" />
+                     <input type={showLoginPin?'text':'password'} readOnly value={loginData.pin} className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded text-center text-slate-900 font-mono text-xl tracking-[0.4em] shadow-inner placeholder:text-slate-400" placeholder="••••••" />
                      <button type="button" onClick={()=>setShowLoginPin(!showLoginPin)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 transition-colors">{showLoginPin?<EyeOff size={14}/>:<Eye size={14}/>}</button>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-1.5 pt-2">
-                  {[1,2,3,4,5,6,7,8,9].map(n=><button key={n} type="button" onClick={()=>loginData.pin.length<6 && setLoginData(p=>({...p, pin:p.pin+n}))} className="h-10 bg-white border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 active:scale-95 text-xs shadow-sm rounded">{n}</button>)}
+                  {[1,2,3,4,5,6,7,8,9].map(n=><button key={n} type="button" onClick={()=>loginData.pin.length<6 && setLoginData(p=>({...p, pin:p.pin+n}))} className="h-10 bg-white border border-slate-200 text-slate-900 font-bold hover:bg-slate-50 active:scale-95 text-xs shadow-sm rounded">{n}</button>)}
                   <button type="button" onClick={()=>setLoginData(p=>({...p, pin:''}))} className="h-10 bg-slate-100 text-slate-400 text-[8px] font-black rounded">CLR</button>
-                  <button type="button" onClick={()=>loginData.pin.length<6 && setLoginData(p=>({...p, pin:p.pin+'0'}))} className="h-10 bg-white border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 shadow-sm rounded">0</button>
+                  <button type="button" onClick={()=>loginData.pin.length<6 && setLoginData(p=>({...p, pin:p.pin+'0'}))} className="h-10 bg-white border border-slate-200 text-slate-900 font-bold hover:bg-slate-50 shadow-sm rounded">0</button>
                   <button type="button" onClick={()=>setLoginData(p=>({...p, pin:p.pin.slice(0,-1)}))} className="h-10 bg-slate-100 text-slate-400 flex items-center justify-center rounded"><Delete size={12}/></button>
                 </div>
 
