@@ -12,16 +12,15 @@ export const db = {
   },
 
   async save(table: string, document: any) {
-    if (!document.id) return;
-    // UPSERT logic in Supabase REST: POST with Resolution=merge-duplicates or similar
-    // Standard Supabase REST API upsert uses 'Prefer: resolution=merge-duplicates'
-    const headers = { 'Prefer': 'resolution=merge-duplicates' };
-    return supabaseRequest(table, 'POST', {}, document);
+    // UPSERT logic in Supabase REST: POST with Resolution=merge-duplicates
+    const headers = { 'Prefer': 'resolution=merge-duplicates,return=representation' };
+    return supabaseRequest(table, 'POST', {}, document, headers);
   },
 
   async saveMany(table: string, documents: any[]) {
     if (!documents?.length) return;
-    return supabaseRequest(table, 'POST', {}, documents);
+    const headers = { 'Prefer': 'resolution=merge-duplicates,return=representation' };
+    return supabaseRequest(table, 'POST', {}, documents, headers);
   },
 
   async delete(table: string, id: string) {
@@ -34,8 +33,8 @@ export const db = {
        const query: Record<string, string> = { ...payload.filter };
        return { documents: await supabaseRequest(table, 'GET', query) };
      }
-     if (action === 'insertOne') return supabaseRequest(table, 'POST', {}, payload.document);
-     if (action === 'insertMany') return supabaseRequest(table, 'POST', {}, payload.documents);
+     if (action === 'insertOne') return db.save(table, payload.document);
+     if (action === 'insertMany') return db.saveMany(table, payload.documents);
      return { error: 'Action mapping not implemented for SQL yet' };
   },
 

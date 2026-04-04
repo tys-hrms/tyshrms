@@ -69,18 +69,28 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       const stored = localStorage.getItem('tys_hrms_session');
       if (stored) {
         const session = JSON.parse(stored);
-        if (session.tenant?.id) setSettings((p: any) => ({ ...p, tenant_id: session.tenant.id }));
+        if (session.tenant?.id) {
+          setSettings((p: any) => ({ ...p, tenant_id: session.tenant.id }));
+        }
       }
-    } catch { /* ignore */ }
+    } catch (e) {
+      console.warn('[SettingsContext] LocalStorage hydration failed:', e);
+    }
   }, []);
 
   const loadCloudSettings = async () => {
     if (!settings.tenant_id) return;
     try {
       const cSettings = await db.tenants.getSettings(settings.tenant_id);
-      if (cSettings) setSettings((p: any) => ({ ...p, ...cSettings }));
+      if (cSettings) {
+        setSettings((p: any) => ({ ...p, ...cSettings }));
+      }
       setLastSyncedAt(Date.now());
-    } catch { /* ignore */ } finally { setIsLoading(false); }
+    } catch (e) {
+      console.error('[SettingsContext] Cloud load error:', e);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {

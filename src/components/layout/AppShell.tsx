@@ -211,7 +211,7 @@ function TopHeader({ setIsSidebarOpen, onOpenNotifications }: { setIsSidebarOpen
                </>
              ) : (
                <>
-                 {isCloudEnabled ? 'Supabase Sync Active' : 'Local Mode'}
+                 Supabase Sync Active
                  {lastSyncedAt && <span className="opacity-40 font-medium lowercase">({new Date(lastSyncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })})</span>}
                </>
              )}

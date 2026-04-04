@@ -8,7 +8,8 @@ export async function supabaseRequest(
   table: string,
   method: 'GET' | 'POST' | 'PATCH' | 'DELETE' = 'GET',
   queryParams: Record<string, string> = {},
-  body?: any
+  body?: any,
+  customHeaders: Record<string, string> = {}
 ): Promise<any> {
   const url = new URL(`${SUPABASE_URL}/rest/v1/${table}`);
   Object.entries(queryParams).forEach(([key, value]) => url.searchParams.append(key, value));
@@ -17,7 +18,8 @@ export async function supabaseRequest(
     'apikey': SUPABASE_KEY,
     'Authorization': `Bearer ${SUPABASE_KEY}`,
     'Content-Type': 'application/json',
-    'Prefer': 'return=representation'
+    'Prefer': 'return=representation',
+    ...customHeaders
   };
 
   try {

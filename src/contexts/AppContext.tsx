@@ -7,7 +7,13 @@ import { useSettings } from './SettingsContext';
 import { useAuth } from './AuthContext';
 
 function generateId(): string {
-  return crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36);
+  // Always return a valid UUID for Supabase compatibility
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  // Fallback for older environments
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
 }
 
 const DEFAULT_TASKS: TaskDefinition[] = [];
@@ -121,7 +127,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         fetchData('dispatches', [] as DispatchBatch[]),
       ]);
 
-      setProducts(cProducts.map((p: Product) => ({ ...p, mongo_synced: true })));
+      setProducts(cProducts.map((p: Product) => ({ ...p, is_synced: true })));
       setAssignments(cAssignments);
       setWorkLogs(cLogs);
       setLeaves(cLeaves);
@@ -178,7 +184,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!session?.tenant?.id) return;
     const newProduct: Product = { 
       ...p, 
-      id: generateId(), 
+      id: generateId(),
       tenant_id: session.tenant.id,
       created_at: new Date().toISOString(), 
       quantity: p.quantity || 0 
@@ -187,7 +193,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setIsSyncing(true);
     try {
       await db.save('products', newProduct);
-      setProducts(prev => prev.map(pr => pr.id === newProduct.id ? { ...pr, mongo_synced: true } : pr));
+      setProducts(prev => prev.map(pr => pr.id === newProduct.id ? { ...pr, is_synced: true } : pr));
     } finally {
       setIsSyncing(false);
     }
@@ -199,17 +205,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const now = new Date().toISOString();
     const newProducts = pArray.map(p => ({ 
       ...p, 
-      id: generateId(), 
+      id: generateId(),
       tenant_id: tid,
       created_at: now, 
-      mongo_synced: false, 
+      is_synced: false, 
       quantity: p.quantity || 0 
-    }));
+    } as Product));
     setProducts(prev => [...prev, ...newProducts]);
     setIsSyncing(true);
     try {
         await db.request('insertMany', 'products', { documents: newProducts });
-        setProducts(prev => prev.map(p => newProducts.some(np => np.id === p.id) ? { ...p, mongo_synced: true } : p));
+        setProducts(prev => prev.map(p => newProducts.some(np => np.id === p.id) ? { ...p, is_synced: true } : p));
     } finally {
         setIsSyncing(false);
     }
