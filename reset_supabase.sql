@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS tenants (
   shift_start_time TIME DEFAULT '09:00:00',
   grace_period_mins INTEGER DEFAULT 15,
   payroll_settings JSONB DEFAULT '{}',
-  branding JSONB DEFAULT '{"primaryColor": "#2d7cf6", "secondaryColor": "#14b8a6", "themeMode": "dark"}'::JSONB,
+  branding JSONB DEFAULT '{"primaryColor": "#2d7cf6", "secondaryColor": "#14b8a6", "themeMode": "light"}'::JSONB,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   is_active BOOLEAN DEFAULT TRUE,
   "companySlug" TEXT -- CamelCase for consistency with legacy code

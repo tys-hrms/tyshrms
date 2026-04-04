@@ -44,7 +44,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     primaryColor: '#2d7cf6',
     secondaryColor: '#14b8a6',
     accentColor: '#f59e0b',
-    themeMode: 'dark',
+    themeMode: 'light',
   },
   state: 'Maharashtra',
   payrollSettings: {
