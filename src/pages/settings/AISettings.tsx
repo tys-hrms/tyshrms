@@ -1,25 +1,21 @@
 import React, { useState } from 'react';
 import { Bot, Key, Check } from 'lucide-react';
-import { useRBAC } from '../../contexts/RBACContext';
 import { useSettings } from '../../contexts/SettingsContext';
 
 export default function AISettings() {
-  const { can } = useRBAC();
   const { settings, updateSettings } = useSettings();
   const isAdmin = true;
   
-  const [apiKey, setApiKey] = useState(settings.openAiKey || '');
+  const [apiKey, setApiKey] = useState(settings.openai_key || '');
   const [showSuccess, setShowSuccess] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [testStatus, setTestStatus] = useState<'idle'|'testing'|'success'|'error'>('idle');
 
   const saveKey = () => {
-    // Save to cloud via settings context (persisted in MongoDB, not localStorage)
-    updateSettings({ openAiKey: apiKey });
+    updateSettings({ openai_key: apiKey });
     setShowSuccess(true);
     setTimeout(() => setShowSuccess(false), 2000);
   };
-
 
   const testConnection = async () => {
     setIsTesting(true);

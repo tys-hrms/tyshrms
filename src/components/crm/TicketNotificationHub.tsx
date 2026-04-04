@@ -42,11 +42,11 @@ export default function TicketNotificationHub() {
 
     const relevant = leads.filter(l => {
       // 1. Unread/New leads assigned/tagged to me
-      const isMine = l.primaryRepId === userId || l.taggedRepIds.includes(userId) || l.assignedManagerId === userId;
-      const isNew = new Date(l.createdAt).getTime() > Date.now() - 60000; // Last 1 minute
+      const isMine = l.primary_rep_id === userId || l.tagged_rep_ids?.includes(userId) || l.assigned_manager_id === userId;
+      const isNew = new Date(l.created_at).getTime() > Date.now() - 60000; // Last 1 minute
       
       // 2. SLA Breaches
-      const isBreached = l.isBreached && l.status === 'active';
+      const isBreached = l.is_breached && l.status === 'active';
 
       return isMine && (isNew || isBreached);
     });
@@ -59,7 +59,7 @@ export default function TicketNotificationHub() {
   };
 
   const acknowledge = async (id: string) => {
-    await updateLead(id, { isBreached: false, lastContactedAt: new Date().toISOString() });
+    await updateLead(id, { is_breached: false, last_contacted_at: new Date().toISOString() });
     dismiss(id);
   };
 
@@ -69,7 +69,7 @@ export default function TicketNotificationHub() {
     <div className="fixed top-20 right-6 z-[100] w-80 space-y-3 pointer-events-none">
       {visibleTickets.map((ticket) => {
         const Icon = SOURCE_ICONS[ticket.source];
-        const isBreached = ticket.isBreached;
+        const isBreached = ticket.is_breached;
 
         return (
           <div 
@@ -89,7 +89,7 @@ export default function TicketNotificationHub() {
                      <p className={`text-[10px] font-black uppercase tracking-widest ${isBreached ? 'text-rose-400' : 'text-slate-500'}`}>
                         {isBreached ? 'SLA BREACH ALERT' : 'New Ticket Assigned'}
                      </p>
-                     <h4 className="text-sm font-black text-white">{ticket.ticketNumber}</h4>
+                     <h4 className="text-sm font-black text-white">{ticket.ticket_number}</h4>
                   </div>
                </div>
                <button onClick={() => dismiss(ticket.id)} className="text-slate-500 hover:text-white">
@@ -98,8 +98,8 @@ export default function TicketNotificationHub() {
             </div>
 
             <div>
-               <p className="text-xs font-bold text-slate-200">{ticket.customerName}</p>
-               <p className="text-[10px] text-slate-400 font-medium">{ticket.companyName || 'Individual Lead'}</p>
+               <p className="text-xs font-bold text-slate-200">{ticket.customer_name}</p>
+               <p className="text-[10px] text-slate-400 font-medium">{ticket.company_name || 'Individual Lead'}</p>
             </div>
 
             <div className="flex items-center gap-2">

@@ -1,0 +1,1 @@
+﻿src/pages/users/UserRegistrationForm.tsx(83,40): error TS2345: Argument of type 'string' is not assignable to parameter of type 'SetStateAction<UserRole>'.

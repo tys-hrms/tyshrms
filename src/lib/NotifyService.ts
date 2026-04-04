@@ -11,7 +11,7 @@ export class NotifyService {
     return template
       .replace(/{worker_name}/g, worker.name)
       .replace(/{start_date}/g, leave.date)
-      .replace(/{end_date}/g, leave.endDate || leave.date)
+      .replace(/{end_date}/g, leave.end_date || leave.date)
       .replace(/{status}/g, status.toUpperCase())
       .replace(/{reviewer_name}/g, reviewer.name)
       .replace(/{reason}/g, leave.reason || 'None provided');
@@ -39,13 +39,13 @@ export class NotifyService {
   ) {
     if (!settings.enabled) return;
 
-    if (settings.whatsappEnabled && (worker.contactNumber || worker.phone)) {
-      const msg = this.generateMessage(settings.whatsappTemplate, worker, leave, reviewer, status);
-      this.sendWhatsApp(worker.contactNumber || worker.phone || '', msg);
+    if (settings.whatsapp_enabled && worker.phone) {
+      const msg = this.generateMessage(settings.whatsapp_template, worker, leave, reviewer, status);
+      this.sendWhatsApp(worker.phone || '', msg);
     }
 
-    if (settings.emailEnabled && worker.email) {
-      const msg = this.generateMessage(settings.emailTemplate, worker, leave, reviewer, status);
+    if (settings.email_enabled && worker.email) {
+      const msg = this.generateMessage(settings.email_template, worker, leave, reviewer, status);
       this.sendEmail(worker.email, `Leave Request ${status.toUpperCase()}`, msg);
     }
   }

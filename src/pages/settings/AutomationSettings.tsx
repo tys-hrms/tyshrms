@@ -4,7 +4,7 @@ import { MessageSquare, Mail, Bell, ShieldCheck, Save, Phone, Info, CheckCircle2
 
 export default function AutomationSettings() {
   const { settings, updateLeaveAutomation } = useSettings();
-  const [formData, setFormData] = useState(settings.leaveAutomation);
+  const [formData, setFormData] = useState(settings.leave_automation);
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -67,18 +67,18 @@ export default function AutomationSettings() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setFormData({ ...formData, whatsappEnabled: !formData.whatsappEnabled })}
-                  className={`w-10 h-5 rounded-full transition-all relative ${formData.whatsappEnabled ? 'bg-emerald-500' : 'bg-slate-800'}`}
+                  onClick={() => setFormData({ ...formData, whatsapp_enabled: !formData.whatsapp_enabled })}
+                  className={`w-10 h-5 rounded-full transition-all relative ${formData.whatsapp_enabled ? 'bg-emerald-500' : 'bg-slate-800'}`}
                 >
-                  <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${formData.whatsappEnabled ? 'left-6' : 'left-1'}`} />
+                  <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${formData.whatsapp_enabled ? 'left-6' : 'left-1'}`} />
                 </button>
               </div>
 
               <div className="space-y-3">
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Message Template</label>
                 <textarea
-                  value={formData.whatsappTemplate}
-                  onChange={e => setFormData({ ...formData, whatsappTemplate: e.target.value })}
+                  value={formData.whatsapp_template}
+                  onChange={e => setFormData({ ...formData, whatsapp_template: e.target.value })}
                   rows={6}
                   className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-sm text-slate-300 focus:border-custom-blue outline-none resize-none transition-all placeholder:text-slate-700"
                   placeholder="Draft your message..."
@@ -101,18 +101,18 @@ export default function AutomationSettings() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setFormData({ ...formData, emailEnabled: !formData.emailEnabled })}
-                  className={`w-10 h-5 rounded-full transition-all relative ${formData.emailEnabled ? 'bg-custom-blue' : 'bg-slate-800'}`}
+                  onClick={() => setFormData({ ...formData, email_enabled: !formData.email_enabled })}
+                  className={`w-10 h-5 rounded-full transition-all relative ${formData.email_enabled ? 'bg-custom-blue' : 'bg-slate-800'}`}
                 >
-                  <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${formData.emailEnabled ? 'left-6' : 'left-1'}`} />
+                  <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${formData.email_enabled ? 'left-6' : 'left-1'}`} />
                 </button>
               </div>
 
               <div className="space-y-3">
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Email Body Template</label>
                 <textarea
-                  value={formData.emailTemplate}
-                  onChange={e => setFormData({ ...formData, emailTemplate: e.target.value })}
+                  value={formData.email_template}
+                  onChange={e => setFormData({ ...formData, email_template: e.target.value })}
                   rows={6}
                   className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-sm text-slate-300 focus:border-custom-blue outline-none resize-none transition-all placeholder:text-slate-700"
                   placeholder="Draft your email..."

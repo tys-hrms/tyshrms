@@ -1,17 +1,16 @@
 import React, { useState } from 'react';
-import { CalendarDays, Plane, Printer } from 'lucide-react';
+import { CalendarDays, Plane, Printer, ChevronLeft, ChevronRight } from 'lucide-react';
 
 import AttendancePage from './attendance/AttendancePage';
 import LeaveManagement from './attendance/LeaveManagement';
 import AttendanceGrid from '../components/hr/AttendanceGrid';
 import { useAuth } from '../contexts/AuthContext';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 
-type Tab = 'attendance' | 'leaves';
+type Tab = 'attendance' | 'leaves' | 'grid';
 
 export default function AttendanceIndex() {
-  const [activeTab, setActiveTab] = useState<Tab | 'grid'>('attendance');
+  const [activeTab, setActiveTab] = useState<Tab>('attendance');
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   const { settings } = useSettings();
   const { attendanceLogs } = useAuth();
@@ -46,7 +45,7 @@ export default function AttendanceIndex() {
       <div className="hidden print:block border-b-2 border-slate-900 pb-6 mb-8">
         <div className="flex justify-between items-end">
             <div>
-                <h1 className="text-2xl font-black text-slate-900">{settings.branding.companyName}</h1>
+                <h1 className="text-2xl font-black text-slate-900">{settings.branding.company_name}</h1>
                 <p className="text-sm font-bold text-slate-600 uppercase tracking-widest mt-1">Attendance & Workforce Report</p>
             </div>
             <div className="text-right">

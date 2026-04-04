@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   LogIn, LogOut, Coffee, Play, Timer, X, Clock
@@ -25,16 +25,16 @@ export default function WorkforceFAB({ onBreakStart, onBreakEnd }: WorkforceFABP
   const intervalRef = useRef<ReturnType<typeof setInterval>>();
 
   useEffect(() => {
-    if (session.isOnBreak && session.breakStartTime) {
+    if (session.is_on_break && session.break_start_time) {
       intervalRef.current = setInterval(() => {
-        setElapsed(Date.now() - session.breakStartTime!);
+        setElapsed(Date.now() - new Date(session.break_start_time!).getTime());
       }, 1000);
     } else {
-      clearInterval(intervalRef.current);
+      if (intervalRef.current) clearInterval(intervalRef.current);
       setElapsed(0);
     }
-    return () => clearInterval(intervalRef.current);
-  }, [session.isOnBreak, session.breakStartTime]);
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [session.is_on_break, session.break_start_time]);
 
   const handleClockIn = () => {
     clockIn();
@@ -61,7 +61,7 @@ export default function WorkforceFAB({ onBreakStart, onBreakEnd }: WorkforceFABP
   return (
     <>
       {/* Break timer pill */}
-      {session.isOnBreak && (
+      {session.is_on_break && (
         <div className="fixed top-16 left-1/2 -translate-x-1/2 z-40 animate-fade-in">
           <div className="bg-amber-500 text-white px-4 py-1.5 rounded-full flex items-center gap-2 shadow-lg shadow-amber-500/30">
             <Coffee className="w-4 h-4" />
@@ -70,12 +70,12 @@ export default function WorkforceFAB({ onBreakStart, onBreakEnd }: WorkforceFABP
         </div>
       )}
 
-      {/* FAB Wrapper (now standard flex within ActionCluster) */}
+      {/* FAB Wrapper */}
       <div className="z-50 flex flex-col items-end gap-3">
         {/* Action buttons */}
         {open && (
           <div className="flex flex-col items-end gap-2 animate-slide-up">
-            {!session.isClockedIn ? (
+            {!session.is_clocked_in ? (
               <FabAction
                 icon={<LogIn className="w-5 h-5" />}
                 label="Clock In"
@@ -84,7 +84,7 @@ export default function WorkforceFAB({ onBreakStart, onBreakEnd }: WorkforceFABP
               />
             ) : (
               <>
-                {!session.isOnBreak ? (
+                {!session.is_on_break ? (
                   <FabAction
                     icon={<Coffee className="w-5 h-5" />}
                     label="Start Break"
@@ -114,15 +114,15 @@ export default function WorkforceFAB({ onBreakStart, onBreakEnd }: WorkforceFABP
         <button
           onClick={() => setOpen(!open)}
           className={`w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all duration-300 active:scale-90
-            ${open ? 'bg-surface-600 rotate-45' : session.isOnBreak
-              ? 'bg-amber-500 shadow-amber-500/40 animate-pulse-slow'
-              : session.isClockedIn
+            ${open ? 'bg-slate-600 rotate-45' : session.is_on_break
+              ? 'bg-amber-500 shadow-amber-500/40'
+              : session.is_clocked_in
                 ? 'bg-emerald-500 shadow-emerald-500/40'
-                : 'bg-brand-500 shadow-brand-500/40'}`}
+                : 'bg-custom-blue shadow-custom-blue/40'}`}
         >
           {open
             ? <X className="w-6 h-6 text-white" />
-            : session.isOnBreak
+            : session.is_on_break
               ? <Timer className="w-6 h-6 text-white" />
               : <Clock className="w-6 h-6 text-white" />}
         </button>
@@ -131,7 +131,7 @@ export default function WorkforceFAB({ onBreakStart, onBreakEnd }: WorkforceFABP
       {/* Click-outside backdrop */}
       {open && (
         <div
-          className="fixed inset-0 z-40"
+          className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm"
           onClick={() => setOpen(false)}
         />
       )}
@@ -150,11 +150,9 @@ function FabAction({
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-2 pr-4 pl-3 py-2.5 rounded-full text-white font-semibold text-sm
-                 shadow-lg active:scale-95 transition-all duration-150"
-      style={{ background: color.replace('bg-', '') }}
+      className={`flex items-center gap-2 pr-4 pl-3 py-2.5 rounded-full text-white font-semibold text-sm shadow-lg active:scale-95 transition-all duration-150 ${color}`}
     >
-      <span className={`w-8 h-8 rounded-full ${color} flex items-center justify-center`}>
+      <span className="w-8 h-8 rounded-full flex items-center justify-center bg-white/20">
         {icon}
       </span>
       {label}

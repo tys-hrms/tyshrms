@@ -117,7 +117,7 @@ export default function DangerZone() {
         </div>
         <div className="p-6 bg-slate-900 border border-slate-800 rounded-2xl">
            <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Can I export first?</h4>
-           <p className="text-xs text-slate-400">Yes, we recommend exporting your Payroll (CSV) and Product lists before performing this action. Deletion is instantaneous on MongoDB Atlas.</p>
+           <p className="text-xs text-slate-400">Yes, we recommend exporting your Payroll (CSV) and Product lists before performing this action. Deletion is instantaneous on the cloud database.</p>
         </div>
       </div>
     </div>

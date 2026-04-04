@@ -10,42 +10,42 @@ const DEFAULT_PERMISSIONS: RolePermission[] = [
   // Admin — full access to everything
   ...(['dashboard','users','products','assignments','attendance','leaves','settings','rbac','reports','crm','payroll'] as AppModule[]).map(mod => ({
     role: 'Admin' as UserRole, module: mod,
-    viewScope: 'global' as PermissionScope, createScope: 'global' as PermissionScope, editScope: 'global' as PermissionScope, deleteScope: 'global' as PermissionScope,
-    features: { biometricAllowed: true }
+    view_scope: 'global' as PermissionScope, create_scope: 'global' as PermissionScope, edit_scope: 'global' as PermissionScope, delete_scope: 'global' as PermissionScope,
+    features: { biometric_allowed: true }
   })),
   // Manager — restricted location access
   { 
     role: 'Manager', module: 'dashboard', 
-    viewScope: 'location', createScope: 'none', editScope: 'none', deleteScope: 'none',
-    features: { biometricAllowed: true }
+    view_scope: 'location', create_scope: 'none', edit_scope: 'none', delete_scope: 'none',
+    features: { biometric_allowed: true }
   },
-  { role: 'Manager', module: 'users', viewScope: 'location', createScope: 'location', editScope: 'location', deleteScope: 'none' },
-  { role: 'Manager', module: 'products', viewScope: 'global', createScope: 'global', editScope: 'global', deleteScope: 'none' },
-  { role: 'Manager', module: 'assignments', viewScope: 'location', createScope: 'location', editScope: 'location', deleteScope: 'location' },
-  { role: 'Manager', module: 'attendance', viewScope: 'location', createScope: 'none', editScope: 'location', deleteScope: 'none' },
-  { role: 'Manager', module: 'leaves', viewScope: 'location', createScope: 'none', editScope: 'location', deleteScope: 'none' },
-  { role: 'Manager', module: 'settings', viewScope: 'location', createScope: 'none', editScope: 'none', deleteScope: 'none' },
-  { role: 'Manager', module: 'rbac', viewScope: 'none', createScope: 'none', editScope: 'none', deleteScope: 'none' },
-  { role: 'Manager', module: 'reports', viewScope: 'location', createScope: 'none', editScope: 'none', deleteScope: 'none' },
-  { role: 'Manager', module: 'crm', viewScope: 'location', createScope: 'location', editScope: 'location', deleteScope: 'none' },
-  { role: 'Manager', module: 'payroll', viewScope: 'location', createScope: 'none', editScope: 'none', deleteScope: 'none' },
+  { role: 'Manager', module: 'users', view_scope: 'location', create_scope: 'location', edit_scope: 'location', delete_scope: 'none' },
+  { role: 'Manager', module: 'products', view_scope: 'global', create_scope: 'global', edit_scope: 'global', delete_scope: 'none' },
+  { role: 'Manager', module: 'assignments', view_scope: 'location', create_scope: 'location', edit_scope: 'location', delete_scope: 'location' },
+  { role: 'Manager', module: 'attendance', view_scope: 'location', create_scope: 'none', edit_scope: 'location', delete_scope: 'none' },
+  { role: 'Manager', module: 'leaves', view_scope: 'location', create_scope: 'none', edit_scope: 'location', delete_scope: 'none' },
+  { role: 'Manager', module: 'settings', view_scope: 'location', create_scope: 'none', edit_scope: 'none', delete_scope: 'none' },
+  { role: 'Manager', module: 'rbac', view_scope: 'none', create_scope: 'none', edit_scope: 'none', delete_scope: 'none' },
+  { role: 'Manager', module: 'reports', view_scope: 'location', create_scope: 'none', edit_scope: 'none', delete_scope: 'none' },
+  { role: 'Manager', module: 'crm', view_scope: 'location', create_scope: 'location', edit_scope: 'location', delete_scope: 'none' },
+  { role: 'Manager', module: 'payroll', view_scope: 'location', create_scope: 'none', edit_scope: 'none', delete_scope: 'none' },
 
   // Worker — own data only
   { 
     role: 'Worker', module: 'dashboard', 
-    viewScope: 'location', createScope: 'none', editScope: 'none', deleteScope: 'none',
-    features: { biometricAllowed: true }
+    view_scope: 'location', create_scope: 'none', edit_scope: 'none', delete_scope: 'none',
+    features: { biometric_allowed: true }
   },
-  { role: 'Worker', module: 'users', viewScope: 'none', createScope: 'none', editScope: 'none', deleteScope: 'none' },
-  { role: 'Worker', module: 'products', viewScope: 'location', createScope: 'none', editScope: 'none', deleteScope: 'none' },
-  { role: 'Worker', module: 'assignments', viewScope: 'location', createScope: 'none', editScope: 'location', deleteScope: 'none' },
-  { role: 'Worker', module: 'attendance', viewScope: 'location', createScope: 'none', editScope: 'none', deleteScope: 'none' },
-  { role: 'Worker', module: 'leaves', viewScope: 'location', createScope: 'location', editScope: 'none', deleteScope: 'none' },
-  { role: 'Worker', module: 'settings', viewScope: 'none', createScope: 'none', editScope: 'none', deleteScope: 'none' },
-  { role: 'Worker', module: 'rbac', viewScope: 'none', createScope: 'none', editScope: 'none', deleteScope: 'none' },
-  { role: 'Worker', module: 'reports', viewScope: 'none', createScope: 'none', editScope: 'none', deleteScope: 'none' },
-  { role: 'Worker', module: 'crm', viewScope: 'none', createScope: 'none', editScope: 'none', deleteScope: 'none' },
-  { role: 'Worker', module: 'payroll', viewScope: 'none', createScope: 'none', editScope: 'none', deleteScope: 'none' },
+  { role: 'Worker', module: 'users', view_scope: 'none', create_scope: 'none', edit_scope: 'none', delete_scope: 'none' },
+  { role: 'Worker', module: 'products', view_scope: 'location', create_scope: 'none', edit_scope: 'none', delete_scope: 'none' },
+  { role: 'Worker', module: 'assignments', view_scope: 'location', create_scope: 'none', edit_scope: 'location', delete_scope: 'none' },
+  { role: 'Worker', module: 'attendance', view_scope: 'location', create_scope: 'none', edit_scope: 'none', delete_scope: 'none' },
+  { role: 'Worker', module: 'leaves', view_scope: 'location', create_scope: 'location', edit_scope: 'none', delete_scope: 'none' },
+  { role: 'Worker', module: 'settings', view_scope: 'none', create_scope: 'none', edit_scope: 'none', delete_scope: 'none' },
+  { role: 'Worker', module: 'rbac', view_scope: 'none', create_scope: 'none', edit_scope: 'none', delete_scope: 'none' },
+  { role: 'Worker', module: 'reports', view_scope: 'none', create_scope: 'none', edit_scope: 'none', delete_scope: 'none' },
+  { role: 'Worker', module: 'crm', view_scope: 'none', create_scope: 'none', edit_scope: 'none', delete_scope: 'none' },
+  { role: 'Worker', module: 'payroll', view_scope: 'none', create_scope: 'none', edit_scope: 'none', delete_scope: 'none' },
 ];
 
 interface RBACContextType {
@@ -75,15 +75,15 @@ export function RBACProvider({ children }: { children: ReactNode }) {
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (!settings.mongodb.isEnabled || !session?.tenant?.id) {
-      if (!session?.tenant?.id) setIsLoading(false);
+    if (!session?.tenant?.id) {
+      setIsLoading(false);
       return;
     }
 
     const loadCloudRBAC = async () => {
       try {
         const cPermissions = await db.request('find', 'rbac_permissions', { 
-          filter: { tenantId: session.tenant!.id } 
+          filter: { tenant_id: session.tenant!.id } 
         }).then(res => res.documents || []);
         
         if (cPermissions.length) {
@@ -104,7 +104,7 @@ export function RBACProvider({ children }: { children: ReactNode }) {
       }
     };
     loadCloudRBAC();
-  }, [settings.mongodb.isEnabled, session?.tenant?.id]);
+  }, [session?.tenant?.id]);
 
   const can = (role: UserRole, module: AppModule, action: PermissionAction, targetLocationId?: string, userLocationId?: string): boolean => {
     // Admin always has module bypass
@@ -115,10 +115,10 @@ export function RBACProvider({ children }: { children: ReactNode }) {
     
     let scope: PermissionScope = 'none';
     switch (action) {
-      case 'view': scope = perm.viewScope; break;
-      case 'create': scope = perm.createScope; break;
-      case 'edit': scope = perm.editScope; break;
-      case 'delete': scope = perm.deleteScope; break;
+      case 'view': scope = perm.view_scope; break;
+      case 'create': scope = perm.create_scope; break;
+      case 'edit': scope = perm.edit_scope; break;
+      case 'delete': scope = perm.delete_scope; break;
     }
 
     if (scope === 'none') return false;
@@ -130,10 +130,10 @@ export function RBACProvider({ children }: { children: ReactNode }) {
   const hasFeature = (role: UserRole, feature: keyof NonNullable<RolePermission['features']>): boolean => {
     // For features, we check matrix even for Admins
     const defaultFeatures = {
-      biometricAllowed: true,
-      systemPrintAllowed: true,
-      aiAssistantAllowed: true,
-      calculatorAllowed: true
+      biometric_allowed: true,
+      system_print_allowed: true,
+      ai_assistant_allowed: true,
+      calculator_allowed: true
     };
     const rolePermissions = permissions.filter(p => p.role === role);
     if (!rolePermissions.length) return defaultFeatures[feature] ?? false;
@@ -146,15 +146,15 @@ export function RBACProvider({ children }: { children: ReactNode }) {
         if (p.role !== role || p.module !== module) return p;
         return {
           ...p,
-          viewScope: action === 'view' ? value : p.viewScope,
-          createScope: action === 'create' ? value : p.createScope,
-          editScope: action === 'edit' ? value : p.editScope,
-          deleteScope: action === 'delete' ? value : p.deleteScope,
+          view_scope: action === 'view' ? value : p.view_scope,
+          create_scope: action === 'create' ? value : p.create_scope,
+          edit_scope: action === 'edit' ? value : p.edit_scope,
+          delete_scope: action === 'delete' ? value : p.delete_scope,
         };
       });
-      if (settings.mongodb.isEnabled && session?.tenant?.id) {
+      if (session?.tenant?.id) {
         const updated = next.find(p => p.role === role && p.module === module);
-        if (updated) db.save('rbac_permissions', { ...updated, id: `${session.tenant.id}_${role}_${module}`, tenantId: session.tenant.id });
+        if (updated) db.save('rbac_permissions', { ...updated, id: `${session.tenant.id}_${role}_${module}`, tenant_id: session.tenant.id });
       }
       return next;
     });
@@ -166,15 +166,15 @@ export function RBACProvider({ children }: { children: ReactNode }) {
         if (p.role !== role) return p;
         return { ...p, features: { ...p.features, [feature]: value } };
       });
-      if (settings.mongodb.isEnabled) {
-        next.filter(p => p.role === role).forEach(p => db.save('rbac_permissions', { ...p, id: `${p.role}_${p.module}` }));
+      if (session?.tenant?.id) {
+        next.filter(p => p.role === role).forEach(p => db.save('rbac_permissions', { ...p, id: `${session.tenant!.id}_${p.role}_${p.module}`, tenant_id: session.tenant!.id }));
       }
       return next;
     });
   };
 
   const saveAllToCloud = async () => {
-    if (!settings.mongodb.isEnabled) return;
+    if (!session?.tenant?.id) return;
     setIsSaving(true);
     try {
       await Promise.all(permissions.map(p => db.save('rbac_permissions', { ...p, id: `${p.role}_${p.module}` })));
@@ -191,11 +191,11 @@ export function RBACProvider({ children }: { children: ReactNode }) {
     if (getAvailableRoles().includes(roleName)) return;
     const newPerms: RolePermission[] = ['dashboard','users','products','assignments','attendance','leaves','settings','rbac','reports','crm','payroll'].map(mod => ({
       role: roleName as UserRole, module: mod as AppModule,
-      viewScope: 'none', createScope: 'none', editScope: 'none', deleteScope: 'none',
+      view_scope: 'none', create_scope: 'none', edit_scope: 'none', delete_scope: 'none',
       features: {}
     }));
     setPermissions(prev => [...prev, ...newPerms]);
-    if (settings.mongodb.isEnabled) db.saveMany('rbac_permissions', newPerms.map(p => ({ ...p, id: `${p.role}_${p.module}` })));
+    if (session?.tenant?.id) db.saveMany('rbac_permissions', newPerms.map(p => ({ ...p, id: `${session.tenant!.id}_${p.role}_${p.module}`, tenant_id: session.tenant!.id })));
   };
 
   const deleteRole = (role: string) => {
@@ -207,8 +207,8 @@ export function RBACProvider({ children }: { children: ReactNode }) {
     if (['Admin', 'Manager', 'Worker'].includes(oldName)) return;
     setPermissions(prev => {
       const next = prev.map(p => p.role === oldName ? { ...p, role: newName as UserRole } : p);
-      if (settings.mongodb.isEnabled) {
-        next.filter(p => p.role === newName).forEach(p => db.save('rbac_permissions', { ...p, id: `${p.role}_${p.module}` }));
+      if (session?.tenant?.id) {
+        next.filter(p => p.role === newName).forEach(p => db.save('rbac_permissions', { ...p, id: `${session.tenant!.id}_${p.role}_${p.module}`, tenant_id: session.tenant!.id }));
       }
       return next;
     });

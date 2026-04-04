@@ -29,9 +29,11 @@ export const db = {
   },
 
   async request(action: string, table: string, payload: any = {}) {
-     // Unified request for custom actions
-     // For now, mapping standard mongo-like actions to SQL
-     if (action === 'find') return { documents: await supabaseRequest(table, 'GET', payload.filter || {}) };
+     // Remapped to Supabase REST
+     if (action === 'find') {
+       const query: Record<string, string> = { ...payload.filter };
+       return { documents: await supabaseRequest(table, 'GET', query) };
+     }
      if (action === 'insertOne') return supabaseRequest(table, 'POST', {}, payload.document);
      if (action === 'insertMany') return supabaseRequest(table, 'POST', {}, payload.documents);
      return { error: 'Action mapping not implemented for SQL yet' };
@@ -117,9 +119,8 @@ export const db = {
   /** ── Synchronization Engine ── */
   sync: {
     async fromLocal(tenant_id: string) {
-       // Keep existing logic but route to Supabase
-       console.log('[Sync] Ready for SQL migration...');
-       return 0; // Simplified for now
+       console.log('[Sync] SQL Migration unnecessary for Fresh Start.');
+       return 0;
     }
   }
 };

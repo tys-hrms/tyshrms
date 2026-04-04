@@ -6,13 +6,13 @@ import { useRBAC } from '../contexts/RBACContext';
 import { 
   BarChart3, Users, Package, TrendingUp, Calendar, 
   ArrowUpRight, ArrowDownRight, Download, Filter,
-  CheckCircle2, AlertCircle, Clock, User as UserIcon, Palette, Layout, FileText
+  CheckCircle2, AlertCircle, Clock, User as UserIcon
 } from 'lucide-react';
 import ReportFormatter, { ReportTheme } from '../components/reports/ReportFormatter';
 
 export default function ReportsPage() {
   const { assignments, workLogs, getDailyStats } = useApp();
-  const { session, users, attendanceLogs } = useAuth();
+  const { session, users } = useAuth();
   const { settings } = useSettings();
   const { permissions } = useRBAC();
   const [timeRange, setTimeRange] = useState<'today' | 'week' | 'month'>('today');
@@ -30,15 +30,15 @@ export default function ReportsPage() {
 
   // --- Dynamic Quality Rate Calculation ---
   const qualityRate = useMemo(() => {
-    const totalProcessed = stats.totalPiecesCompleted + stats.totalRejected;
+    const totalProcessed = stats.total_pieces_completed + stats.total_rejected;
     if (totalProcessed === 0) return '0%';
-    return `${Math.round((stats.totalPiecesCompleted / totalProcessed) * 100)}%`;
+    return `${Math.round((stats.total_pieces_completed / totalProcessed) * 100)}%`;
   }, [stats]);
 
   const canPrint = useMemo(() => {
      if (session.currentUser?.role === 'Admin') return true;
      const perm = permissions.find((p: any) => p.role === session.currentUser?.role);
-     return perm?.features?.systemPrintAllowed ?? false;
+     return perm?.features?.system_print_allowed ?? false;
   }, [session.currentUser?.role, permissions]);
 
   const handlePrint = () => {
@@ -51,8 +51,8 @@ export default function ReportsPage() {
     const counts: Record<string, { completed: number; target: number }> = {};
     assignments.forEach(a => {
       if (!counts[a.sku]) counts[a.sku] = { completed: 0, target: 0 };
-      counts[a.sku].completed += a.piecesCompleted;
-      counts[a.sku].target += (a.targetQty || a.piecesAssigned);
+      counts[a.sku].completed += a.pieces_completed;
+      counts[a.sku].target += (a.target_qty || a.pieces_assigned);
     });
     return Object.entries(counts).map(([sku, data]) => ({
       sku,
@@ -65,8 +65,8 @@ export default function ReportsPage() {
   const topWorkers = useMemo(() => {
     const performance: Record<string, number> = {};
     workLogs.forEach(log => {
-      const pieces = (log.piecesIroned || 0) + (log.piecesChecked || 0) + (log.piecesPacked || 0);
-      performance[log.userId] = (performance[log.userId] || 0) + pieces;
+      const pieces = (log.pieces_ironed || 0) + (log.pieces_checked || 0) + (log.pieces_packed || 0);
+      performance[log.user_id] = (performance[log.user_id] || 0) + pieces;
     });
 
     return Object.entries(performance)
@@ -131,10 +131,10 @@ export default function ReportsPage() {
            <div className="xl:col-span-3 space-y-8">
               {/* Hero Stats */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Total Attendance" value={stats.activeWorkers} sub="Workers Active" icon={Users} color="blue" trend="+2.4%" />
-                <StatCard label="Units Produced" value={stats.totalPiecesCompleted} sub="Pieces Finished" icon={Package} color="emerald" trend="+12.5%" />
+                <StatCard label="Total Attendance" value={stats.active_workers} sub="Workers Active" icon={Users} color="blue" trend="+2.4%" />
+                <StatCard label="Units Produced" value={stats.total_pieces_completed} sub="Pieces Finished" icon={Package} color="emerald" trend="+12.5%" />
                 <StatCard label="Quality Rate" value={qualityRate} sub="Checks Passed" icon={TrendingUp} color="amber" trend="+0.8%" />
-                <StatCard label="Efficiency" value={`${Math.round((stats.totalPiecesCompleted / (stats.totalPiecesAssigned || 1)) * 100)}%`} sub="Target Achievement" icon={BarChart3} color="purple" trend="-1.2%" />
+                <StatCard label="Efficiency" value={`${Math.round((stats.total_pieces_completed / (stats.total_pieces_assigned || 1)) * 100)}%`} sub="Target Achievement" icon={BarChart3} color="purple" trend="-1.2%" />
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -152,8 +152,8 @@ export default function ReportsPage() {
                         <div key={i} className="space-y-2">
                           <div className="flex justify-between items-end">
                             <div>
-                              <span className="text-sm font-bold text-white uppercase tracking-wider">{item.sku}</span>
-                              <p className="text-[10px] text-slate-500 font-bold uppercase mt-0.5">{item.completed.toLocaleString()} / {item.target.toLocaleString()} Units</p>
+                               <span className="text-sm font-bold text-white uppercase tracking-wider">{item.sku}</span>
+                               <p className="text-[10px] text-slate-500 font-bold uppercase mt-0.5">{item.completed.toLocaleString()} / {item.target.toLocaleString()} Units</p>
                             </div>
                             <span className="text-sm font-black text-white">{item.percent}%</span>
                           </div>
@@ -191,8 +191,8 @@ export default function ReportsPage() {
                               {w.name[0]}
                             </div>
                             <div>
-                              <p className="text-sm font-bold text-white">{w.name}</p>
-                              <p className="text-[10px] text-slate-500 font-bold uppercase">Rank #{i+1}</p>
+                               <p className="text-sm font-bold text-white">{w.name}</p>
+                               <p className="text-[10px] text-slate-500 font-bold uppercase">Rank #{i+1}</p>
                             </div>
                           </div>
                           <div className="text-right">
@@ -219,11 +219,11 @@ export default function ReportsPage() {
                          </div>
                          <div className="flex-1 min-w-0">
                            <p className="text-xs text-slate-300">
-                             <span className="font-bold text-white">{users.find(u => u.id === log.userId)?.name}</span> 
+                             <span className="font-bold text-white">{users.find(u => u.id === log.user_id)?.name}</span> 
                              {" logged "}
-                             <span className="text-emerald-400 font-bold">{(log.piecesIroned || 0) + (log.piecesChecked || 0) + (log.piecesPacked || 0)} pieces</span>
+                             <span className="text-emerald-400 font-bold">{(log.pieces_ironed || 0) + (log.pieces_checked || 0) + (log.pieces_packed || 0)} pieces</span>
                            </p>
-                           <p className="text-[9px] text-slate-600 font-bold uppercase mt-1">{new Date(log.loggedAt).toLocaleString()}</p>
+                           <p className="text-[9px] text-slate-600 font-bold uppercase mt-1">{new Date(log.logged_at).toLocaleString()}</p>
                          </div>
                       </div>
                     ))}
@@ -239,7 +239,7 @@ export default function ReportsPage() {
         {/* Branding Header */}
         {showBranding && (
           <div className={`border-b-4 border-black pb-4 mb-8 text-center mt-8 ${reportTheme === 'modern' ? 'bg-slate-50 border-double' : ''}`}>
-              <h1 className={`${reportTheme === 'tally' ? 'text-4xl' : 'text-3xl'} font-black uppercase tracking-widest`}>{settings.branding.companyName || 'CORPORATE'}</h1>
+              <h1 className={`${reportTheme === 'tally' ? 'text-4xl' : 'text-3xl'} font-black uppercase tracking-widest`}>{settings.branding.company_name || 'CORPORATE'}</h1>
               <p className="text-sm font-bold mt-2 uppercase tracking-tighter">Operational Intelligence Statement</p>
               <p className="text-[10px] uppercase mt-1">Ref ID: {Math.random().toString(36).substr(2, 9).toUpperCase()} | GMT {new Date().toLocaleString()}</p>
           </div>
@@ -255,7 +255,7 @@ export default function ReportsPage() {
                 <tbody>
                   <tr className="border-b border-black">
                     <th className="p-2 border-r border-black w-1/2 uppercase tracking-tighter">Total Workforce Attendance</th>
-                    <td className="p-2 font-mono font-bold">{stats.activeWorkers} Employees Active</td>
+                    <td className="p-2 font-mono font-bold">{stats.active_workers} Employees Active</td>
                   </tr>
                   {visibleFields.includes('quality') && (
                     <tr className="border-b border-black">
@@ -265,7 +265,7 @@ export default function ReportsPage() {
                   )}
                   <tr>
                     <th className="p-2 border-r border-black uppercase tracking-tighter">Gross Production Yield</th>
-                    <td className="p-2 font-mono font-bold">{stats.totalPiecesCompleted.toLocaleString()} UNITS COMPLETE</td>
+                    <td className="p-2 font-mono font-bold">{stats.total_pieces_completed.toLocaleString()} UNITS COMPLETE</td>
                   </tr>
                 </tbody>
              </table>
@@ -330,10 +330,10 @@ export default function ReportsPage() {
               <h2 className="text-md font-bold uppercase border-b border-black pb-1 mb-2">4. Tactical Activity Audit Log</h2>
               <div className="space-y-1">
                  {workLogs.slice(-20).reverse().map((log, i) => (
-                   <div key={i} className="text-[10px] border-b border-black/10 py-1 flex justify-between">
-                      <span>[{new Date(log.loggedAt).toLocaleTimeString()}] {users.find(u => u.id === log.userId)?.name} processed product flow.</span>
-                      <span className="font-mono font-bold uppercase tracking-widest">{(log.piecesIroned || 0) + (log.piecesChecked || 0) + (log.piecesPacked || 0)} UNITS</span>
-                   </div>
+                    <div key={i} className="text-[10px] border-b border-black/10 py-1 flex justify-between">
+                       <span>[{new Date(log.logged_at).toLocaleTimeString()}] {users.find(u => u.id === log.user_id)?.name} processed product flow.</span>
+                       <span className="font-mono font-bold uppercase tracking-widest">{(log.pieces_ironed || 0) + (log.pieces_checked || 0) + (log.pieces_packed || 0)} UNITS</span>
+                    </div>
                  ))}
               </div>
            </div>
@@ -374,7 +374,7 @@ function StatCard({ label, value, sub, trend, icon: Icon, color }: any) {
           <Icon className="w-6 h-6" />
         </div>
         <div className={`flex items-center gap-1 text-xs font-bold ${trend.startsWith('+') ? 'text-emerald-400' : 'text-rose-400'}`}>
-          {trend.startsWith('+') ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+           <TrendingUp className="w-3 h-3" />
           {trend}
         </div>
       </div>

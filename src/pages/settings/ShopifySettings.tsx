@@ -4,12 +4,12 @@ import { Store, Key, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function ShopifySettings() {
   const { settings, updateShopify } = useSettings();
-  const [url, setUrl] = useState(settings.shopify.storeUrl);
-  const [token, setToken] = useState(settings.shopify.accessToken);
+  const [url, setUrl] = useState(settings.shopify.store_url);
+  const [token, setToken] = useState(settings.shopify.access_token);
   const [isSaved, setIsSaved] = useState(false);
 
   const handleSave = () => {
-    updateShopify({ storeUrl: url, accessToken: token });
+    updateShopify({ store_url: url, access_token: token });
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 3000);
   };

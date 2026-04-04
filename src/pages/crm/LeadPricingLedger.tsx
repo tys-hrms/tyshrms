@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../../contexts/AppContext';
-import { useCRM } from '../../contexts/CRMContext';
 import { 
   Package, Plus, Trash2, IndianRupee, Percent, 
   Truck, Calculator, Receipt, ChevronRight, Search
@@ -22,11 +21,11 @@ export default function LeadPricingLedger({ leadId, initialItems = [], initialTr
 
   // --- Calculations ---
   const totals = useMemo(() => {
-    const subtotal = items.reduce((acc, item) => acc + (item.basePrice * item.quantity), 0);
-    const totalDiscount = items.reduce((acc, item) => acc + (item.basePrice * item.quantity * (item.discountPercent / 100)), 0);
+    const subtotal = items.reduce((acc, item) => acc + (item.base_price * item.quantity), 0);
+    const totalDiscount = items.reduce((acc, item) => acc + (item.base_price * item.quantity * (item.discount_percent / 100)), 0);
     const totalGst = items.reduce((acc, item) => {
-      const discountedPrice = (item.basePrice * item.quantity) - (item.basePrice * item.quantity * (item.discountPercent / 100));
-      return acc + (discountedPrice * (item.gstPercent / 100));
+      const discountedPrice = (item.base_price * item.quantity) - (item.base_price * item.quantity * (item.discount_percent / 100));
+      return acc + (discountedPrice * (item.gst_percent / 100));
     }, 0);
     const grandTotal = subtotal - totalDiscount + totalGst + transportation;
 
@@ -37,9 +36,9 @@ export default function LeadPricingLedger({ leadId, initialItems = [], initialTr
     const newItem: CRMOrderItem = {
       sku: product.sku,
       quantity: 1,
-      basePrice: 0, // Manual entry for flexibility, or we could add a price field to Product type
-      discountPercent: 0,
-      gstPercent: 18,
+      base_price: 0, // Manual entry for flexibility
+      discount_percent: 0,
+      gst_percent: 18,
       total: 0
     };
     setItems([...items, newItem]);
@@ -57,7 +56,7 @@ export default function LeadPricingLedger({ leadId, initialItems = [], initialTr
 
   const filteredProducts = products.filter(p => 
     p.sku.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    p.title.toLowerCase().includes(searchQuery.toLowerCase())
+    p.name.toLowerCase().includes(searchQuery.toLowerCase())
   ).slice(0, 5);
 
   return (
@@ -96,7 +95,7 @@ export default function LeadPricingLedger({ leadId, initialItems = [], initialTr
                 >
                    <div>
                       <p className="text-sm font-bold text-white uppercase">{p.sku}</p>
-                      <p className="text-[10px] text-slate-500">{p.title}</p>
+                      <p className="text-[10px] text-slate-500">{p.name}</p>
                    </div>
                    <Plus className="w-4 h-4 text-custom-blue" />
                 </button>
@@ -124,9 +123,9 @@ export default function LeadPricingLedger({ leadId, initialItems = [], initialTr
             </thead>
             <tbody className="divide-y divide-slate-800/50">
                {items.map((item, i) => {
-                  const rowSub = item.quantity * item.basePrice;
-                  const rowDisc = rowSub * (item.discountPercent / 100);
-                  const rowGst = (rowSub - rowDisc) * (item.gstPercent / 100);
+                  const rowSub = item.quantity * item.base_price;
+                  const rowDisc = rowSub * (item.discount_percent / 100);
+                  const rowGst = (rowSub - rowDisc) * (item.gst_percent / 100);
                   const rowTotal = rowSub - rowDisc + rowGst;
 
                   return (
@@ -151,8 +150,8 @@ export default function LeadPricingLedger({ leadId, initialItems = [], initialTr
                           <div className="relative">
                              <input 
                                type="number" 
-                               value={item.basePrice}
-                               onChange={e => updateItem(i, { basePrice: parseInt(e.target.value) || 0 })}
+                               value={item.base_price}
+                               onChange={e => updateItem(i, { base_price: parseInt(e.target.value) || 0 })}
                                className="w-24 bg-slate-950 border border-slate-800 rounded-lg pl-6 pr-2 py-1.5 text-xs text-white outline-none focus:border-custom-blue font-mono"
                              />
                              <IndianRupee className="w-3 h-3 text-slate-600 absolute left-2 top-2.5" />
@@ -162,8 +161,8 @@ export default function LeadPricingLedger({ leadId, initialItems = [], initialTr
                           <div className="relative">
                              <input 
                                type="number" 
-                               value={item.discountPercent}
-                               onChange={e => updateItem(i, { discountPercent: parseInt(e.target.value) || 0 })}
+                               value={item.discount_percent}
+                               onChange={e => updateItem(i, { discount_percent: parseInt(e.target.value) || 0 })}
                                className="w-16 bg-slate-950 border border-slate-800 rounded-lg pr-5 pl-2 py-1.5 text-xs text-white outline-none focus:border-custom-blue font-mono"
                              />
                              <Percent className="w-3 h-3 text-slate-600 absolute right-2 top-2.5" />
@@ -171,8 +170,8 @@ export default function LeadPricingLedger({ leadId, initialItems = [], initialTr
                        </td>
                        <td className="p-4">
                           <select 
-                             value={item.gstPercent}
-                             onChange={e => updateItem(i, { gstPercent: parseInt(e.target.value) })}
+                             value={item.gst_percent}
+                             onChange={e => updateItem(i, { gst_percent: parseInt(e.target.value) })}
                              className="bg-slate-950 border border-slate-800 text-xs text-white rounded-lg px-2 py-1.5 focus:border-custom-blue"
                           >
                              <option value="0">0%</option>

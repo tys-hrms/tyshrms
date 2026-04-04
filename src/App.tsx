@@ -43,8 +43,8 @@ function AppRoutes() {
   // Listen for the custom nav event from AppShell (Sidebar)
   useEffect(() => {
     const handleNav = (e: CustomEvent<string>) => {
-      if (session.tenant?.companySlug) {
-        navigate(`/${session.tenant.companySlug}/app${e.detail}`);
+      if (session.tenant?.company_slug) {
+        navigate(`/${session.tenant.company_slug}/app${e.detail}`);
       } else {
         navigate(e.detail);
       }
@@ -63,7 +63,7 @@ function AppRoutes() {
 
   // Redirect root / to slug-based dashboard
   if (location.pathname === '/') {
-    return <Navigate to={`/${session.tenant.companySlug}/app/`} replace />;
+    return <Navigate to={`/${session.tenant.company_slug}/app/`} replace />;
   }
 
   return (
@@ -87,7 +87,7 @@ function AppRoutes() {
           </Routes>
         </AppShell>
       } />
-      <Route path="*" element={<Navigate to={`/${session.tenant.companySlug}/app/`} replace />} />
+      <Route path="*" element={<Navigate to={`/${session.tenant.company_slug}/app/`} replace />} />
     </Routes>
   );
 }

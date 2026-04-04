@@ -111,7 +111,64 @@ CREATE TABLE IF NOT EXISTS work_logs (
   logged_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 8. INDEXES
+-- 8. CREATE CRM LEADS
+CREATE TABLE IF NOT EXISTS leads (
+  id TEXT PRIMARY KEY,
+  tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
+  ticket_number TEXT UNIQUE NOT NULL,
+  customer_name TEXT NOT NULL,
+  company_name TEXT,
+  email TEXT,
+  phone TEXT NOT NULL,
+  source TEXT NOT NULL,
+  stage TEXT DEFAULT 'lead_in',
+  status TEXT DEFAULT 'active',
+  priority TEXT DEFAULT 'medium',
+  total_value DOUBLE PRECISION DEFAULT 0,
+  client_category TEXT DEFAULT 'B2C',
+  lead_temperature TEXT DEFAULT 'Warm',
+  items JSONB DEFAULT '[]',
+  primary_rep_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+  tagged_rep_ids TEXT[] DEFAULT '{}',
+  is_breached BOOLEAN DEFAULT FALSE,
+  next_follow_up_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 9. CREATE SALARY RECORDS (Committed Payroll)
+CREATE TABLE IF NOT EXISTS salary_records (
+  id TEXT PRIMARY KEY,
+  tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
+  user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+  month TEXT NOT NULL, -- Format: YYYY-MM
+  billable_days INTEGER NOT NULL,
+  gross_pay DOUBLE PRECISION NOT NULL,
+  epf_deduction DOUBLE PRECISION DEFAULT 0,
+  esi_deduction DOUBLE PRECISION DEFAULT 0,
+  pt_deduction DOUBLE PRECISION DEFAULT 0,
+  ot_pay DOUBLE PRECISION DEFAULT 0,
+  net_pay DOUBLE PRECISION NOT NULL,
+  status TEXT DEFAULT 'processed',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 10. CREATE RBAC PERMISSIONS
+CREATE TABLE IF NOT EXISTS rbac_permissions (
+  id TEXT PRIMARY KEY,
+  tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
+  role TEXT NOT NULL,
+  module TEXT NOT NULL,
+  view_scope TEXT DEFAULT 'none',
+  create_scope TEXT DEFAULT 'none',
+  edit_scope TEXT DEFAULT 'none',
+  delete_scope TEXT DEFAULT 'none',
+  features JSONB DEFAULT '{}',
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(tenant_id, role, module)
+);
+
+-- 11. INDEXES
 CREATE INDEX idx_products_tenant ON products(tenant_id);
 CREATE INDEX idx_users_tenant ON users(tenant_id);
 CREATE INDEX idx_attendance_date ON attendance_logs(date);

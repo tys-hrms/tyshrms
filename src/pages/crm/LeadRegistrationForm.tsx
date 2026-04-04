@@ -33,23 +33,23 @@ export default function LeadRegistrationForm({ onSuccess, onCancel }: LeadFormPr
 
   // Form State
   const [source, setSource] = useState<CRMLeadSource>('whatsapp');
-  const [sourceNotes, setSourceNotes] = useState('');
-  const [customerName, setCustomerName] = useState('');
-  const [companyName, setCompanyName] = useState('');
+  const [source_notes, setSourceNotes] = useState('');
+  const [customer_name, setCustomerName] = useState('');
+  const [company_name, setCompanyName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
-  const [isGstCompliant, setIsGstCompliant] = useState(false);
-  const [businessType, setBusinessType] = useState('');
-  const [expectedTimeline, setExpectedTimeline] = useState('Immediate');
-  const [leadTemperature, setLeadTemperature] = useState<'Cold' | 'Warm' | 'Hot'>('Warm');
-  const [clientCategory, setClientCategory] = useState<'B2B' | 'B2C'>('B2C');
-  const [leadBrief, setLeadBrief] = useState('');
-  const [taggedRepIds, setTaggedRepIds] = useState<string[]>([]);
+  const [is_gst_compliant, setIsGstCompliant] = useState(false);
+  const [business_type, setBusinessType] = useState('');
+  const [expected_timeline, setExpectedTimeline] = useState('Immediate');
+  const [lead_temperature, setLeadTemperature] = useState<'Cold' | 'Warm' | 'Hot'>('Warm');
+  const [client_category, setClientCategory] = useState<'B2B' | 'B2C'>('B2C');
+  const [lead_brief, setLeadBrief] = useState('');
+  const [tagged_rep_ids, setTaggedRepIds] = useState<string[]>([]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!customerName || !phone) {
+    if (!customer_name || !phone) {
       setError('Please provide Name and Phone number.');
       return;
     }
@@ -60,19 +60,19 @@ export default function LeadRegistrationForm({ onSuccess, onCancel }: LeadFormPr
     try {
       await createLead({
         source,
-        sourceNotes,
-        customerName,
-        companyName,
+        source_notes,
+        customer_name,
+        company_name,
         phone,
         email,
         priority,
-        isGstCompliant,
-        businessType,
-        expectedTimeline,
-        leadTemperature,
-        clientCategory,
-        leadBrief,
-        taggedRepIds
+        is_gst_compliant,
+        business_type,
+        expected_timeline,
+        lead_temperature,
+        client_category,
+        lead_brief,
+        tagged_rep_ids
       });
       onSuccess();
     } catch (err: any) {
@@ -127,7 +127,7 @@ export default function LeadRegistrationForm({ onSuccess, onCancel }: LeadFormPr
                <input 
                   type="text" 
                   placeholder="Specify other source details..."
-                  value={sourceNotes}
+                  value={source_notes}
                   onChange={e => setSourceNotes(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:border-custom-blue outline-none transition-all"
                />
@@ -141,14 +141,14 @@ export default function LeadRegistrationForm({ onSuccess, onCancel }: LeadFormPr
               <button 
                 type="button"
                 onClick={() => setClientCategory('B2C')}
-                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${clientCategory === 'B2C' ? 'bg-custom-blue text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${client_category === 'B2C' ? 'bg-custom-blue text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
               >
                 Individual (B2C)
               </button>
               <button 
                 type="button"
                 onClick={() => setClientCategory('B2B')}
-                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${clientCategory === 'B2B' ? 'bg-custom-blue text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${client_category === 'B2B' ? 'bg-custom-blue text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
               >
                 Business (B2B)
               </button>
@@ -163,7 +163,7 @@ export default function LeadRegistrationForm({ onSuccess, onCancel }: LeadFormPr
                 <input 
                   type="text" 
                   required
-                  value={customerName}
+                  value={customer_name}
                   onChange={e => setCustomerName(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:border-custom-blue outline-none transition-all"
                   placeholder="John Doe"
@@ -172,13 +172,13 @@ export default function LeadRegistrationForm({ onSuccess, onCancel }: LeadFormPr
               </div>
             </div>
 
-            {clientCategory === 'B2B' && (
+            {client_category === 'B2B' && (
               <div className="animate-in slide-in-from-top-2 duration-300">
                 <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 pl-1">Company Name</label>
                 <div className="relative">
                   <input 
                     type="text" 
-                    value={companyName}
+                    value={company_name}
                     onChange={e => setCompanyName(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:border-custom-blue outline-none transition-all"
                     placeholder="Acme Corp"
@@ -232,7 +232,7 @@ export default function LeadRegistrationForm({ onSuccess, onCancel }: LeadFormPr
               <div>
                 <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 pl-1">Business Type</label>
                 <select 
-                  value={businessType}
+                  value={business_type}
                   onChange={e => setBusinessType(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:border-custom-blue outline-none transition-all appearance-none"
                 >
@@ -249,7 +249,7 @@ export default function LeadRegistrationForm({ onSuccess, onCancel }: LeadFormPr
               <div>
                 <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 pl-1">Expected Timeline</label>
                 <select 
-                  value={expectedTimeline}
+                  value={expected_timeline}
                   onChange={e => setExpectedTimeline(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:border-custom-blue outline-none transition-all appearance-none"
                 >
@@ -271,7 +271,7 @@ export default function LeadRegistrationForm({ onSuccess, onCancel }: LeadFormPr
                   { id: 'Hot', icon: Flame, color: 'text-rose-400', bg: 'bg-rose-500/10' },
                 ].map((temp) => {
                   const Icon = temp.icon;
-                  const isSelected = leadTemperature === temp.id;
+                  const isSelected = lead_temperature === temp.id;
                   return (
                     <button
                       key={temp.id}
@@ -294,7 +294,7 @@ export default function LeadRegistrationForm({ onSuccess, onCancel }: LeadFormPr
            <div className="pt-2">
               <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 pl-1">Client Requirements / Brief</label>
               <textarea 
-                value={leadBrief}
+                value={lead_brief}
                 onChange={e => setLeadBrief(e.target.value)}
                 placeholder="Capturing specific requirements, sizes, fabric choices or event dates discussed during the brief..."
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:border-custom-blue outline-none transition-all min-h-[100px] resize-none"
@@ -309,7 +309,7 @@ export default function LeadRegistrationForm({ onSuccess, onCancel }: LeadFormPr
            </label>
            <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-1">
               {users.filter(u => u.role !== 'Worker').map(user => {
-                 const isTagged = taggedRepIds.includes(user.id);
+                 const isTagged = tagged_rep_ids.includes(user.id);
                  return (
                     <button
                        key={user.id}
@@ -351,7 +351,7 @@ export default function LeadRegistrationForm({ onSuccess, onCancel }: LeadFormPr
                  <input 
                     type="checkbox" 
                     id="gst_compliant" 
-                    checked={isGstCompliant}
+                    checked={is_gst_compliant}
                     onChange={e => setIsGstCompliant(e.target.checked)}
                     className="w-4 h-4 rounded text-custom-blue focus:ring-custom-blue bg-slate-950 border-slate-800"
                  />

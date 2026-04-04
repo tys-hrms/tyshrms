@@ -22,8 +22,8 @@ export default function ActionCluster() {
           and instead be part of this flex container.
        */}
        <div className="flex flex-col items-end gap-3 pointer-events-auto">
-          {hasFeature(role, 'calculatorAllowed') && <FloatingCalculator />}
-          {hasFeature(role, 'aiAssistantAllowed') && <AIAssistant />}
+          {hasFeature(role, 'calculator_allowed') && <FloatingCalculator />}
+          {hasFeature(role, 'ai_assistant_allowed') && <AIAssistant />}
           <WorkforceFAB />
        </div>
     </div>

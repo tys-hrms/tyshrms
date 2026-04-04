@@ -19,10 +19,10 @@ export default function LocationSettings() {
     name: '',
     type: 'branch',
     address: '',
-    isPrimary: false,
+    is_primary: false,
     latitude: 0,
     longitude: 0,
-    geofenceRadius: 50,
+    geofence_radius: 50,
   });
 
   const handleIframePaste = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -51,7 +51,7 @@ export default function LocationSettings() {
     setIsAdding(false);
     setEditingId(null);
     setMapIframe('');
-    setFormData({ name: '', type: 'branch', address: '', isPrimary: false, latitude: 0, longitude: 0, geofenceRadius: 50 });
+    setFormData({ name: '', type: 'branch', address: '', is_primary: false, latitude: 0, longitude: 0, geofence_radius: 50 });
   };
 
   const startEdit = (w: Location) => {
@@ -60,10 +60,10 @@ export default function LocationSettings() {
       name: w.name, 
       type: w.type, 
       address: w.address || '', 
-      isPrimary: w.isPrimary || false,
+      is_primary: w.is_primary || false,
       latitude: w.latitude || 0,
       longitude: w.longitude || 0,
-      geofenceRadius: w.geofenceRadius || 50,
+      geofence_radius: w.geofence_radius || 50,
     });
     setIsAdding(true);
   };
@@ -88,7 +88,7 @@ export default function LocationSettings() {
     setIsAdding(false); 
     setEditingId(null); 
     setMapIframe('');
-    setFormData({ name: '', type: 'branch', address: '', isPrimary: false, latitude: 0, longitude: 0, geofenceRadius: 50 });
+    setFormData({ name: '', type: 'branch', address: '', is_primary: false, latitude: 0, longitude: 0, geofence_radius: 50 });
   };
 
   return (
@@ -160,13 +160,13 @@ export default function LocationSettings() {
                 </div>
                 <div>
                     <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1.5">Radius (Meters)</label>
-                    <input type="number" value={formData.geofenceRadius} onChange={e => setFormData({ ...formData, geofenceRadius: parseInt(e.target.value) || 50 })} className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-custom-blue outline-none" />
+                    <input type="number" value={formData.geofence_radius} onChange={e => setFormData({ ...formData, geofence_radius: parseInt(e.target.value) || 50 })} className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-custom-blue outline-none" />
                 </div>
             </div>
             
             <div className="md:col-span-2">
               <label className="flex items-center gap-2 cursor-pointer bg-slate-800/50 p-3 rounded-xl border border-slate-700 w-fit">
-                <input type="checkbox" checked={formData.isPrimary} onChange={(e) => setFormData({ ...formData, isPrimary: e.target.checked })} className="rounded bg-slate-700 text-custom-blue w-4 h-4" />
+                <input type="checkbox" checked={formData.is_primary} onChange={(e) => setFormData({ ...formData, is_primary: e.target.checked })} className="rounded bg-slate-700 text-custom-blue w-4 h-4" />
                 <span className="text-sm font-medium text-slate-300">Set as Primary Location</span>
               </label>
             </div>
@@ -184,7 +184,6 @@ export default function LocationSettings() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-10">
         {locations.map(loc => (
           <div key={loc.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition-colors group relative overflow-hidden">
-            {/* Geofence Status Indicator */}
             <div className="absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 bg-custom-blue/5 rounded-full blur-2xl" />
             
             <div className="flex justify-between items-start mb-3 relative">
@@ -193,7 +192,7 @@ export default function LocationSettings() {
                     <span className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-800 border border-slate-700 rounded">
                         {getTypeIcon(loc.type)} {formatType(loc.type)}
                     </span>
-                    {loc.isPrimary && <span className="px-2 py-0.5 bg-custom-blue/10 border border-custom-blue/20 rounded text-custom-blue">Primary</span>}
+                    {loc.is_primary && <span className="px-2 py-0.5 bg-custom-blue/10 border border-custom-blue/20 rounded text-custom-blue">Primary</span>}
                 </div>
                 <h3 className="text-lg font-bold text-white mt-2">{loc.name}</h3>
               </div>
@@ -212,7 +211,7 @@ export default function LocationSettings() {
                     </div>
                     <div className="flex items-center gap-1 text-[10px] font-bold text-teal-400 bg-teal-400/5 px-1.5 py-0.5 rounded border border-teal-400/10">
                         <ShieldCheck className="w-3 h-3" />
-                        {loc.geofenceRadius}M RADIUS
+                        {loc.geofence_radius}M RADIUS
                     </div>
                 </div>
             </div>

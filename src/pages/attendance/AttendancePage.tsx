@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
-import { useApp } from '../../contexts/AppContext';
 import { Calendar, Search, Clock, MapPin, Coffee, CheckCircle2, LayoutGrid, List } from 'lucide-react';
 import AttendanceMatrix from '../../components/attendance/AttendanceMatrix';
 
 export default function AttendancePage() {
   const { session, users, attendanceLogs, breakLogs } = useAuth();
-  const { shifts } = useSettings();
+  const { settings } = useSettings();
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'daily' | 'monthly'>('daily');
@@ -15,7 +14,7 @@ export default function AttendancePage() {
   const isAdmin = session.currentUser?.role === 'Admin' || session.currentUser?.role === 'Manager';
   const displayUsers = isAdmin ? users : users.filter(u => u.id === session.currentUser?.id);
 
-  const getShiftForUser = (shiftId?: string) => shifts.find(s => s.id === shiftId)?.name || 'Open Shift';
+  const getShiftName = (shiftId?: string) => 'Default Shift';
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -26,7 +25,6 @@ export default function AttendancePage() {
         </div>
         
         <div className="flex flex-wrap items-center gap-4">
-          {/* Admin Toggle */}
           {isAdmin && (
              <div className="bg-slate-950 p-1.5 rounded-2xl border border-slate-800 flex items-center shadow-inner mr-4">
                 <button 
@@ -74,7 +72,6 @@ export default function AttendancePage() {
                <thead>
                  <tr className="border-b border-slate-800/60 bg-slate-950/50 text-[10px] font-black uppercase tracking-widest text-slate-500">
                    <th className="px-6 py-4">Employee Context</th>
-                   <th className="px-6 py-4">Shift Profile</th>
                    <th className="px-6 py-4">Clock In</th>
                    <th className="px-6 py-4">Clock Out</th>
                    <th className="px-6 py-4">Status & Breaks</th>
@@ -84,8 +81,8 @@ export default function AttendancePage() {
                  {displayUsers
                    .filter(u => u.name.toLowerCase().includes(searchTerm.toLowerCase()))
                    .map((user) => {
-                     const record = attendanceLogs.find(l => l.userId === user.id && l.date === date);
-                     const userBreaks = record ? breakLogs.filter(b => b.attendanceLogId === record.id) : [];
+                     const record = attendanceLogs.find(l => l.user_id === user.id && l.date === date);
+                     const userBreaks = record ? breakLogs.filter(b => b.attendance_log_id === record.id) : [];
 
                      return (
                        <tr key={user.id} className="hover:bg-slate-800/20 transition-colors group">
@@ -100,14 +97,11 @@ export default function AttendancePage() {
                              </div>
                            </div>
                          </td>
-                         <td className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest cursor-default">
-                           {getShiftForUser(user.shiftId)}
-                         </td>
                          <td className="px-6 py-4">
-                           {record?.clockIn ? (
+                           {record?.clock_in ? (
                              <div className="flex flex-col">
                                <span className="text-sm text-white font-black mb-1 font-mono">
-                                 {new Date(record.clockIn).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                 {new Date(record.clock_in).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                                </span>
                                <span className="inline-flex items-center text-[9px] uppercase font-black tracking-wider text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded border border-blue-500/20 w-fit shadow-lg shadow-blue-500/5">
                                  <CheckCircle2 className="w-3 h-3 mr-1" /> Verified
@@ -118,11 +112,11 @@ export default function AttendancePage() {
                            )}
                          </td>
                          <td className="px-6 py-4">
-                           {record?.clockOut ? (
+                           {record?.clock_out ? (
                              <span className="text-sm text-white font-black font-mono">
-                               {new Date(record.clockOut).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                               {new Date(record.clock_out).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                              </span>
-                           ) : record?.clockIn ? (
+                           ) : record?.clock_in ? (
                              <span className="inline-flex items-center px-4 py-1 rounded-full text-[10px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-widest animate-in fade-in zoom-in duration-500">
                                Session Active
                              </span>
@@ -139,8 +133,8 @@ export default function AttendancePage() {
                                  userBreaks.map((b, i) => (
                                    <div key={i} className="inline-flex items-center px-3 py-1.5 rounded-xl bg-orange-500/10 text-orange-400 border border-orange-500/20 font-black text-[9px] uppercase tracking-tighter">
                                      <Coffee className="w-3.5 h-3.5 mr-1.5" />
-                                     {new Date(b.startTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - 
-                                     {b.endTime ? new Date(b.endTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ' Now'}
+                                     {new Date(b.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - 
+                                     {b.end_time ? new Date(b.end_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ' Now'}
                                    </div>
                                  ))
                                ) : (
@@ -154,7 +148,7 @@ export default function AttendancePage() {
                    })}
                  {displayUsers.length === 0 && (
                    <tr>
-                     <td colSpan={5} className="px-6 py-24 text-center">
+                     <td colSpan={4} className="px-6 py-24 text-center">
                         <div className="flex flex-col items-center justify-center opacity-10">
                            <Calendar className="w-20 h-20 text-white mb-4" />
                            <p className="text-2xl font-black text-white uppercase tracking-tighter italic">Operational Void</p>

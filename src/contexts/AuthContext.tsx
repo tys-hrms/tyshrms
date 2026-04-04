@@ -2,7 +2,6 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { User, AttendanceLog, BreakLog, UserRole, Notification, Tenant, BrandingSettings } from '../types';
 import { db } from '../lib/database';
 import { useSettings } from './SettingsContext';
-import { calculateDistance } from '../lib/location';
 
 function generateId(): string {
   return crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -21,11 +20,11 @@ function slugify(text: string): string {
 interface SessionState {
   currentUser: User | null;
   tenant: Tenant | null;
-  attendanceLog: AttendanceLog | null;
-  activeBreak: BreakLog | null;
-  isClockedIn: boolean;
-  isOnBreak: boolean;
-  breakStartTime: number | null;
+  attendance_log: AttendanceLog | null;
+  active_break: BreakLog | null;
+  is_clocked_in: boolean;
+  is_on_break: boolean;
+  break_start_time: number | null;
 }
 
 interface AuthContextType {
@@ -33,39 +32,37 @@ interface AuthContextType {
   session: SessionState;
   attendanceLogs: AttendanceLog[];
   breakLogs: BreakLog[];
-  unreadCount: number;
-  isFirstRun: boolean;
+  unread_count: number;
+  is_first_run: boolean;
   isLoading: boolean;
   isSyncing: boolean;
   lastSyncedAt: number;
   discoverTenant: (tenantId: string) => Promise<{ success: boolean; tenant?: Tenant; error?: string }>;
   unifiedLogin: (tenantId: string, identifier: string, pin: string) => Promise<{ success: boolean; error?: string }>;
   registerTenant: (data: any) => Promise<{ success: boolean; tenantId?: string; error?: string }>;
-  loginAdmin: (email: string, pin: string) => Promise<{ success: boolean; error?: string }>;
-  loginStaff: (pin: string, faceDetected?: boolean) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
-  createUser: (data: Omit<User, 'id' | 'created_at' | 'isActive' | 'tenant_id'>) => Promise<boolean>;
+  createUser: (data: Omit<User, 'id' | 'created_at' | 'is_active' | 'tenant_id'>) => Promise<boolean>;
   updateUser: (id: string, updates: Partial<User>) => Promise<void>;
   deleteUser: (id: string) => Promise<void>;
   clockIn: (latLng?: string, method?: AttendanceLog['method']) => Promise<void>;
   clockOut: (latLng?: string) => Promise<void>;
   startBreak: () => void;
   endBreak: () => void;
-  registerBiometrics: () => Promise<{ success: boolean; error?: string }>;
   getTodayAttendance: (userId: string) => AttendanceLog | undefined;
   getAllTodayAttendance: () => AttendanceLog[];
   setGeofenceBypass: (userId: string, hours: number) => void;
+  registerBiometrics: (userId: string) => Promise<{ success: boolean; error?: string }>;
   migrateLocalToCloud: () => Promise<{ success: boolean; count: number }>;
 }
 
 const defaultSession: SessionState = {
   currentUser: null,
   tenant: null,
-  attendanceLog: null,
-  activeBreak: null,
-  isClockedIn: false,
-  isOnBreak: false,
-  breakStartTime: null,
+  attendance_log: null,
+  active_break: null,
+  is_clocked_in: false,
+  is_on_break: false,
+  break_start_time: null,
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -80,8 +77,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
   const [attendanceLogs, setAttendanceLogs] = useState<AttendanceLog[]>([]);
   const [breakLogs, setBreakLogs] = useState<BreakLog[]>([]);
-  const { settings, updateSettings } = useSettings();
-  const [unreadCount] = useState(0);
+  const { updateSettings } = useSettings();
+  const [unread_count] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<number>(Date.now());
@@ -155,31 +152,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const tenant: any = { 
         id, 
         name: data.name,
-        admin_name: data.adminName,
+        admin_name: data.admin_name,
         email: data.email,
         phone: data.phone,
         state: data.state,
-        company_type: data.companyType,
-        employee_count: data.employeeCount,
+        company_type: data.company_type,
+        employee_count: data.employee_count,
         base_lat: data.base_lat,
         base_lng: data.base_lng,
         shift_start_time: data.shift_start_time,
         grace_period_mins: data.grace_period_mins,
-        companySlug: slugify(data.name),
-        isActive: true, 
+        company_slug: slugify(data.name),
+        is_active: true, 
         created_at: new Date().toISOString() 
       };
       await db.tenants.insert(tenant);
       const admin: User = { 
         id: generateId(), 
         tenant_id: id, 
-        name: data.adminName, 
+        name: data.admin_name, 
         username: data.username,
-        pin_code: data.pin, 
+        pin_code: data.pin_code, 
         role: 'Admin', 
         email: data.email, 
         phone: data.phone, 
-        isActive: true, 
+        is_active: true, 
         created_at: new Date().toISOString() 
       };
       await db.users.insert(admin);
@@ -189,14 +186,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const loginAdmin = async (email: string, pin: string) => {
-     return { success: false, error: 'Use Unified Login' };
-  };
-
-  const loginStaff = async (pin: string) => {
-     return { success: false, error: 'Use Unified Login' };
-  };
-
   const logout = () => {
     localStorage.removeItem('tys_hrms_session');
     setSession(defaultSession);
@@ -204,7 +193,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const createUser = async (data: any) => {
     if (!session.tenant) return false;
-    const newUser: User = { ...data, id: generateId(), tenant_id: session.tenant.id, isActive: true, created_at: new Date().toISOString() };
+    const newUser: User = { ...data, id: generateId(), tenant_id: session.tenant.id, is_active: true, created_at: new Date().toISOString() };
     await db.users.insert(newUser);
     return true;
   };
@@ -217,8 +206,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await db.users.delete({ id });
   };
 
-  const clockIn = async (latLng?: string, method: AttendanceMethod = 'manual') => {
-    if (!session.currentUser || !session.tenant || session.isClockedIn) return;
+  const clockIn = async (latLng?: string, method: AttendanceLog['method'] = 'manual') => {
+    if (!session.currentUser || !session.tenant || session.is_clocked_in) return;
     const log: AttendanceLog = { 
       id: generateId(), 
       tenant_id: session.tenant.id, 
@@ -230,16 +219,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       status: 'present' 
     };
     await db.attendance.insert(log);
-    setSession(prev => ({ ...prev, attendanceLog: log, isClockedIn: true }));
+    setSession(prev => ({ ...prev, attendance_log: log, is_clocked_in: true }));
   };
 
   const clockOut = async (latLng?: string) => {
-    if (!session.currentUser || !session.isClockedIn || !session.attendanceLog) return;
+    if (!session.currentUser || !session.is_clocked_in || !session.attendance_log) return;
     const now = new Date();
-    const duration = Math.round((now.getTime() - new Date(session.attendanceLog.clock_in!).getTime()) / 60000);
+    const duration = Math.round((now.getTime() - new Date(session.attendance_log.clock_in!).getTime()) / 60000);
     const updated: Partial<AttendanceLog> = { clock_out: now.toISOString(), lat_lng_out: latLng, total_minutes: duration };
-    await db.attendance.update({ id: session.attendanceLog.id }, updated);
-    setSession(prev => ({ ...prev, attendanceLog: null, isClockedIn: false, isOnBreak: false }));
+    await db.attendance.update({ id: session.attendance_log.id }, updated);
+    setSession(prev => ({ ...prev, attendance_log: null, is_clocked_in: false, is_on_break: false }));
   };
 
   const startBreak = () => {};
@@ -257,19 +246,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const setGeofenceBypass = (userId: string, hours: number) => {
     const until = new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
-    updateUser(userId, { geofenceBypassUntil: until });
+    updateUser(userId, { geofence_bypass_until: until });
   };
 
-  const registerBiometrics = async () => ({ success: false, error: 'Disabled' });
-  const migrateLocalToCloud = async () => ({ success: true, count: 0 });
+  const registerBiometrics = async (userId: string) => {
+    return { success: false, error: 'Biometric hardware not detected' };
+  };
+
+  const migrateLocalToCloud = async () => {
+    if (!session.tenant) return { success: false, count: 0 };
+    const count = await db.sync.fromLocal(session.tenant.id);
+    return { success: true, count };
+  };
 
   return (
     <AuthContext.Provider value={{
-      users, session, attendanceLogs, breakLogs, unreadCount, isFirstRun: false, isLoading, isSyncing, lastSyncedAt,
-      discoverTenant, unifiedLogin, registerTenant, loginAdmin, loginStaff, logout,
+      users, session, attendanceLogs, breakLogs, unread_count, is_first_run: false, isLoading, isSyncing, lastSyncedAt,
+      discoverTenant, unifiedLogin, registerTenant, logout,
       createUser, updateUser, deleteUser, clockIn, clockOut, startBreak, endBreak,
-      getTodayAttendance, getAllTodayAttendance, setGeofenceBypass, registerBiometrics,
-      migrateLocalToCloud
+      getTodayAttendance, getAllTodayAttendance, setGeofenceBypass, registerBiometrics, migrateLocalToCloud
     }}>
       {children}
     </AuthContext.Provider>

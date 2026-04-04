@@ -91,13 +91,13 @@ function Sidebar({ isOpen, setIsOpen, activePath, onNavigate }: SidebarProps) {
         {/* Brand Area */}
         <div className="h-16 flex items-center px-6 border-b border-slate-800 shrink-0 bg-slate-950/20">
           <div className="w-8 h-8 rounded-lg bg-custom-blue/20 text-custom-blue flex items-center justify-center mr-3 font-bold text-xl overflow-hidden">
-            {branding.logoUrl ? (
-              <img src={branding.logoUrl} alt="Logo" className="w-full h-full object-contain" />
+            {branding.logo_url ? (
+              <img src={branding.logo_url} alt="Logo" className="w-full h-full object-contain" />
             ) : (
-              branding.companyName.charAt(0)
+              branding.company_name.charAt(0)
             )}
           </div>
-          <span className="text-white font-semibold text-lg tracking-wide truncate">{branding.companyName}</span>
+          <span className="text-white font-semibold text-lg tracking-wide truncate">{branding.company_name}</span>
         </div>
 
         {/* User Profile Mini */}
@@ -177,13 +177,13 @@ function TopHeader({ setIsSidebarOpen, onOpenNotifications }: { setIsSidebarOpen
 
   const isAnySyncing = appSyncing || settingsSyncing || authSyncing || crmSyncing;
 
-  const isCloudEnabled = settings.mongodb.isEnabled;
+  const isCloudEnabled = !!settings.tenant_id;
   const role = session.currentUser?.role || 'Worker';
   const { branding } = settings;
 
   const myNotifications = notifications.filter(n => 
-    n.userId === session.currentUser?.id || 
-    (n.userId === 'broadcast_all' && (role === 'Admin' || role === 'Manager'))
+    n.user_id === session.currentUser?.id || 
+    (n.user_id === 'broadcast_all' && (role === 'Admin' || role === 'Manager'))
   );
   const unreadCount = myNotifications.filter(n => !n.read).length;
 
@@ -197,7 +197,7 @@ function TopHeader({ setIsSidebarOpen, onOpenNotifications }: { setIsSidebarOpen
           <Menu className="w-6 h-6" />
         </button>
         <div className="hidden md:block">
-           <h2 className="text-white font-semibold text-sm tracking-wide hidden lg:block opacity-50 uppercase">{branding.companyName} Operations</h2>
+           <h2 className="text-white font-semibold text-sm tracking-wide hidden lg:block opacity-50 uppercase">{branding.company_name} Operations</h2>
         </div>
       </div>
       
@@ -207,11 +207,11 @@ function TopHeader({ setIsSidebarOpen, onOpenNotifications }: { setIsSidebarOpen
            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
              {isAnySyncing ? (
                <>
-                 <span className="text-custom-blue">Pushing to Cloud...</span>
+                 <span className="text-custom-blue">Saving to Cloud...</span>
                </>
              ) : (
                <>
-                 {isCloudEnabled ? 'Cloud Sync Active' : 'Offline Storage'}
+                 {isCloudEnabled ? 'Supabase Sync Active' : 'Local Mode'}
                  {lastSyncedAt && <span className="opacity-40 font-medium lowercase">({new Date(lastSyncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })})</span>}
                </>
              )}
@@ -270,8 +270,8 @@ function ScrollingTicker() {
   if (activeLogs.length === 0) return null;
 
   const currentLog = activeLogs[index];
-  const w = users.find(u => u.id === currentLog.userId);
-  const a = assignments.find(at => at.id === currentLog.assignmentId);
+  const w = users.find(u => u.id === currentLog.user_id);
+  const a = assignments.find(at => at.id === currentLog.assignment_id);
 
   return (
     <div className="h-10 bg-slate-900/80 backdrop-blur-md border-t border-slate-800 fixed bottom-0 left-0 right-0 md:left-64 z-40 px-6 flex items-center overflow-hidden">
@@ -282,8 +282,8 @@ function ScrollingTicker() {
       
       <div className="flex-1 overflow-hidden relative h-full">
         {activeLogs.map((log, i) => {
-          const l_w = users.find(u => u.id === log.userId);
-          const l_a = assignments.find(at => at.id === log.assignmentId);
+          const l_w = users.find(u => u.id === log.user_id);
+          const l_a = assignments.find(at => at.id === log.assignment_id);
           return (
             <div 
               key={log.id}
@@ -294,9 +294,9 @@ function ScrollingTicker() {
               <p className="text-[11px] font-bold text-slate-300 truncate tracking-wide">
                 <span className="text-white">{l_w?.name || 'Worker'}</span>
                 <span className="mx-2 opacity-30">·</span>
-                <span className="text-custom-blue uppercase">{l_a?.taskType || 'Task'}</span>
+                <span className="text-custom-blue uppercase">{l_a?.task_type || 'Task'}</span>
                 <span className="mx-2 opacity-30">·</span>
-                <span className="text-emerald-400">{log.piecesIroned || log.piecesChecked || log.piecesLabeled || log.piecesPacked || 0} units</span>
+                <span className="text-emerald-400">{log.pieces_ironed || log.pieces_checked || log.pieces_labeled || log.pieces_packed || 0} units</span>
                 <span className="mx-2 opacity-30">·</span>
                 <span className="text-slate-500 font-medium">SKU {l_a?.sku}</span>
               </p>
@@ -320,7 +320,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   
-  const isCloudEnabled = settings.mongodb.isEnabled;
+  const isCloudEnabled = !!settings.tenant_id;
   const activePath = window.location.pathname;
   const { branding } = settings;
 
@@ -348,22 +348,22 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     const root = document.documentElement;
     
     // 1. Dark Mode Toggle
-    if (branding.themeMode === 'dark') {
+    if (branding.theme_mode === 'dark') {
       root.classList.add('dark');
     } else {
       root.classList.remove('dark');
     }
 
     // 2. Custom Brand Colors Injection
-    root.style.setProperty('--color-primary', branding.primaryColor);
-    root.style.setProperty('--color-secondary', branding.secondaryColor);
-    root.style.setProperty('--color-accent', branding.accentColor);
+    root.style.setProperty('--color-primary', branding.primary_color);
+    root.style.setProperty('--color-secondary', branding.secondary_color);
+    root.style.setProperty('--color-accent', branding.accent_color);
     
     // 3. Status Bar Color (Chrome/Safari)
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', branding.themeMode === 'dark' ? '#020617' : '#f8fafc');
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', branding.theme_mode === 'dark' ? '#020617' : '#f8fafc');
   }, [branding]);
 
-  if (session.isOnBreak) {
+  if (session.is_on_break) {
     return <BreakLockScreen onEndBreak={endBreak} />;
   }
 

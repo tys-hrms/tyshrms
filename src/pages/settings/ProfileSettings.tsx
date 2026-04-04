@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { User as UserIcon, Shield, Key, UserCircle, CheckCircle2, AlertCircle, Fingerprint } from 'lucide-react';
+import { Shield, Key, UserCircle, CheckCircle2, AlertCircle, Fingerprint } from 'lucide-react';
 
 import type { User } from '../../types';
 
@@ -36,11 +36,11 @@ export default function ProfileSettings() {
         setError('PINs do not match');
         return;
       }
-      if (users.some(u => u.pinCode === pin && u.id !== user.id)) {
+      if (users.some(u => u.pin_code === pin && u.id !== user.id)) {
         setError('This PIN is already in use by another user');
         return;
       }
-      updates.pinCode = pin;
+      updates.pin_code = pin;
     }
 
     updateUser(user.id, updates);
@@ -52,7 +52,7 @@ export default function ProfileSettings() {
 
   const handleRegisterBiometric = async () => {
     setError('');
-    const res = await registerBiometrics();
+    const res = await registerBiometrics(user.id);
     if (res.success) {
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 3000);
@@ -74,7 +74,7 @@ export default function ProfileSettings() {
               <span className="px-2 py-0.5 rounded bg-slate-800 text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center">
                 <Shield className="w-3 h-3 mr-1" /> {user.role}
               </span>
-              <span className="text-xs text-slate-500">Member since {new Date(user.createdAt).toLocaleDateString()}</span>
+              <span className="text-xs text-slate-500">Member since {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'Unknown'}</span>
             </div>
           </div>
         </div>
@@ -141,8 +141,8 @@ export default function ProfileSettings() {
               <div>
                 <p className="text-sm font-medium text-slate-200">Enable Biometric Login</p>
                 <p className="text-xs text-slate-500">
-                  {user.biometricCredentials?.length 
-                    ? `${user.biometricCredentials.length} device(s) registered for your account.` 
+                  {user.biometric_credentials?.length 
+                    ? `${user.biometric_credentials.length} device(s) registered for your account.` 
                     : 'Log in instantly using Fingerprint or FaceID on your device.'}
                 </p>
               </div>
@@ -152,7 +152,7 @@ export default function ProfileSettings() {
                 className="flex items-center px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 transition-all active:scale-95"
               >
                 <Fingerprint className="w-4 h-4 mr-2 text-teal-400" />
-                {user.biometricCredentials?.length ? 'Register Another Device' : 'Setup Biometrics'}
+                {user.biometric_credentials?.length ? 'Register Another Device' : 'Setup Biometrics'}
               </button>
             </div>
           </div>
@@ -180,4 +180,3 @@ export default function ProfileSettings() {
     </div>
   );
 }
-

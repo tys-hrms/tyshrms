@@ -13,7 +13,7 @@ export default function TasksManager() {
   const canEdit = role === 'Admin' || role === 'Manager';
 
   // Form state (shared for add + edit)
-  const [editingId, setEditingId] = useState<string | null>(null); // null = adding new
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formName, setFormName] = useState('');
   const [formModes, setFormModes] = useState<TaskMode[]>(['single']);
@@ -23,7 +23,7 @@ export default function TasksManager() {
     setFormModes(prev => {
       if (prev.includes(mode)) {
         const next = prev.filter(m => m !== mode);
-        return next.length > 0 ? next : prev; // keep at least 1
+        return next.length > 0 ? next : prev;
       }
       return [...prev, mode];
     });
@@ -40,8 +40,8 @@ export default function TasksManager() {
   const openEdit = (task: TaskDefinition) => {
     setEditingId(task.id);
     setFormName(task.name);
-    setFormModes([...task.allowedModes]);
-    setFormDefault(task.defaultMode);
+    setFormModes([...task.allowed_modes]);
+    setFormDefault(task.default_mode);
     setIsFormOpen(true);
   };
 
@@ -57,20 +57,18 @@ export default function TasksManager() {
     const validDefault: TaskMode = formModes.includes(formDefault) ? formDefault : formModes[0];
 
     if (editingId) {
-      // Update existing
       updateTask(editingId, {
         name: formName.trim(),
-        allowedModes: formModes,
-        defaultMode: validDefault,
+        allowed_modes: formModes,
+        default_mode: validDefault,
       });
     } else {
-      // Create new
       addTask({
         id: `task_${Date.now()}`,
         name: formName.trim(),
-        allowedModes: formModes,
-        defaultMode: validDefault,
-        createdAt: new Date().toISOString(),
+        allowed_modes: formModes,
+        default_mode: validDefault,
+        created_at: new Date().toISOString(),
       });
     }
     closeForm();
@@ -98,7 +96,6 @@ export default function TasksManager() {
         )}
       </div>
 
-      {/* Add / Edit Form */}
       {isFormOpen && (
         <form onSubmit={handleSubmit} className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
           <div className="flex items-center justify-between mb-4">
@@ -222,7 +219,7 @@ export default function TasksManager() {
                 <div className="text-sm">
                   <span className="text-slate-500 block mb-1.5">Supported Modes</span>
                   <div className="flex gap-2 flex-wrap">
-                    {task.allowedModes.map(m => (
+                    {task.allowed_modes.map(m => (
                       <span
                         key={m}
                         className={`px-2.5 py-1 rounded-md text-xs font-semibold uppercase ${
@@ -238,7 +235,7 @@ export default function TasksManager() {
                 </div>
                 <div className="text-sm border-t border-slate-800/60 pt-3 flex justify-between">
                   <span className="text-slate-500">Default Flow</span>
-                  <span className="text-slate-300 font-medium capitalize">{task.defaultMode} Mode</span>
+                  <span className="text-slate-300 font-medium capitalize">{task.default_mode} Mode</span>
                 </div>
               </div>
             </div>

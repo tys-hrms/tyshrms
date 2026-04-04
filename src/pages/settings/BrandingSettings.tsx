@@ -23,11 +23,12 @@ export default function BrandingSettings() {
 
   const resetToDefault = () => {
     const defaults = {
-      companyName: 'HRMSCore',
-      primaryColor: '#2d7cf6',
-      secondaryColor: '#14b8a6',
-      accentColor: '#f59e0b',
-      themeMode: 'dark' as const,
+      company_name: 'HRMSCore',
+      logo_url: '',
+      primary_color: '#2d7cf6',
+      secondary_color: '#14b8a6',
+      accent_color: '#f59e0b',
+      theme_mode: 'dark' as const,
     };
     setFormData(defaults);
   };
@@ -52,8 +53,8 @@ export default function BrandingSettings() {
                     <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Company Name</label>
                     <input 
                         type="text" 
-                        value={formData.companyName}
-                        onChange={e => setFormData({...formData, companyName: e.target.value})}
+                        value={formData.company_name}
+                        onChange={e => setFormData({...formData, company_name: e.target.value})}
                         placeholder="e.g. Acme Corp"
                         className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:border-custom-blue outline-none transition-all"
                     />
@@ -65,8 +66,8 @@ export default function BrandingSettings() {
                             <ImageIcon className="w-4 h-4 text-slate-600 absolute left-4 top-1/2 -translate-y-1/2" />
                             <input 
                                 type="text" 
-                                value={formData.logoUrl || ''}
-                                onChange={e => setFormData({...formData, logoUrl: e.target.value})}
+                                value={formData.logo_url || ''}
+                                onChange={e => setFormData({...formData, logo_url: e.target.value})}
                                 placeholder="https://company.com/logo.png"
                                 className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-11 pr-4 py-3 text-white focus:border-custom-blue outline-none transition-all"
                             />
@@ -80,22 +81,22 @@ export default function BrandingSettings() {
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
              <div className="flex items-center gap-3 mb-6">
                 <div className="p-2.5 bg-amber-500/10 rounded-xl">
-                    {formData.themeMode === 'dark' ? <Moon className="w-5 h-5 text-amber-500" /> : <Sun className="w-5 h-5 text-amber-500" />}
+                    {formData.theme_mode === 'dark' ? <Moon className="w-5 h-5 text-amber-500" /> : <Sun className="w-5 h-5 text-amber-500" />}
                 </div>
                 <h3 className="text-lg font-bold text-white">Visual Mode</h3>
              </div>
 
              <div className="grid grid-cols-2 gap-4">
                 <button 
-                    onClick={() => setFormData({...formData, themeMode: 'light'})}
-                    className={`p-4 rounded-2xl border flex flex-col items-center gap-3 transition-all ${formData.themeMode === 'light' ? 'bg-white border-white text-slate-900' : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'}`}
+                    onClick={() => setFormData({...formData, theme_mode: 'light'})}
+                    className={`p-4 rounded-2xl border flex flex-col items-center gap-3 transition-all ${formData.theme_mode === 'light' ? 'bg-white border-white text-slate-900' : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'}`}
                 >
                     <Sun className="w-6 h-6" />
                     <span className="text-xs font-black uppercase tracking-widest">Light Mode</span>
                 </button>
                 <button 
-                    onClick={() => setFormData({...formData, themeMode: 'dark'})}
-                    className={`p-4 rounded-2xl border flex flex-col items-center gap-3 transition-all ${formData.themeMode === 'dark' ? 'bg-slate-800 border-custom-blue text-white shadow-lg shadow-custom-blue/10' : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'}`}
+                    onClick={() => setFormData({...formData, theme_mode: 'dark'})}
+                    className={`p-4 rounded-2xl border flex flex-col items-center gap-3 transition-all ${formData.theme_mode === 'dark' ? 'bg-slate-800 border-custom-blue text-white shadow-lg shadow-custom-blue/10' : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'}`}
                 >
                     <Moon className="w-6 h-6" />
                     <span className="text-xs font-black uppercase tracking-widest">Dark Mode</span>
@@ -117,27 +118,27 @@ export default function BrandingSettings() {
                 <div className="space-y-6">
                     <ColorPicker 
                         label="Primary Brand Color" 
-                        value={formData.primaryColor} 
-                        onChange={v => setFormData({...formData, primaryColor: v})} 
+                        value={formData.primary_color} 
+                        onChange={v => setFormData({...formData, primary_color: v})} 
                     />
                     <ColorPicker 
                         label="Secondary Color" 
-                        value={formData.secondaryColor} 
-                        onChange={v => setFormData({...formData, secondaryColor: v})} 
+                        value={formData.secondary_color} 
+                        onChange={v => setFormData({...formData, secondary_color: v})} 
                     />
                     <ColorPicker 
                         label="Accent Highlight" 
-                        value={formData.accentColor} 
-                        onChange={v => setFormData({...formData, accentColor: v})} 
+                        value={formData.accent_color} 
+                        onChange={v => setFormData({...formData, accent_color: v})} 
                     />
                 </div>
 
                 <div className="mt-12 p-6 rounded-3xl bg-slate-950 border border-dashed border-slate-800 text-center">
                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Preview of Palette</p>
                     <div className="flex justify-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl shadow-lg" style={{ backgroundColor: formData.primaryColor }} title="Primary" />
-                        <div className="w-12 h-12 rounded-2xl shadow-lg" style={{ backgroundColor: formData.secondaryColor }} title="Secondary" />
-                        <div className="w-12 h-12 rounded-2xl shadow-lg" style={{ backgroundColor: formData.accentColor }} title="Accent" />
+                        <div className="w-12 h-12 rounded-2xl shadow-lg" style={{ backgroundColor: formData.primary_color }} title="Primary" />
+                        <div className="w-12 h-12 rounded-2xl shadow-lg" style={{ backgroundColor: formData.secondary_color }} title="Secondary" />
+                        <div className="w-12 h-12 rounded-2xl shadow-lg" style={{ backgroundColor: formData.accent_color }} title="Accent" />
                     </div>
                 </div>
             </div>

@@ -55,7 +55,7 @@ export default function ProfilePage() {
                   <Briefcase className="w-4 h-4 text-slate-500 shrink-0" />
                   <div>
                     <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Incorporation Name</p>
-                    <p className="text-sm font-bold text-slate-200">{tenant.name} ({tenant.companyType})</p>
+                    <p className="text-sm font-bold text-slate-200">{tenant.name} ({tenant.company_type})</p>
                   </div>
                 </div>
                 
@@ -63,7 +63,7 @@ export default function ProfilePage() {
                   <UserIcon className="w-4 h-4 text-slate-500 shrink-0" />
                   <div>
                     <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Registered Administrator</p>
-                    <p className="text-sm font-bold text-slate-200">{tenant.adminName}</p>
+                    <p className="text-sm font-bold text-slate-200">{tenant.admin_name}</p>
                   </div>
                 </div>
 
@@ -94,7 +94,7 @@ export default function ProfilePage() {
                 <div className="grid grid-cols-2 gap-4 pt-2">
                   <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex flex-col items-center justify-center">
                      <Users className="w-4 h-4 text-custom-blue mb-2" />
-                     <p className="text-xs font-bold text-slate-300">{tenant.employeeCount}</p>
+                     <p className="text-xs font-bold text-slate-300">{tenant.employee_count}</p>
                      <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Headcount</p>
                   </div>
                   <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex flex-col items-center justify-center">

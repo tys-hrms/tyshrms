@@ -13,12 +13,14 @@ export default function WorkstationSettings() {
 
   const [formData, setFormData] = useState<Omit<Workstation, 'id'>>({
     name: '',
-    taskTypes: [],
+    task_types: [],
+    type: 'General',
+    is_active: true,
   });
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || formData.taskTypes.length === 0) return;
+    if (!formData.name || formData.task_types.length === 0) return;
 
     if (editingId) {
       updateWorkstations(workstations.map(w => w.id === editingId ? { ...formData, id: editingId } : w));
@@ -28,12 +30,17 @@ export default function WorkstationSettings() {
     
     setIsAdding(false);
     setEditingId(null);
-    setFormData({ name: '', taskTypes: [] });
+    setFormData({ name: '', task_types: [], type: 'General', is_active: true });
   };
 
   const startEdit = (w: Workstation) => {
     setEditingId(w.id);
-    setFormData({ name: w.name, taskTypes: w.taskTypes || (w as any).taskType ? [(w as any).taskType] : [] });
+    setFormData({ 
+      name: w.name, 
+      task_types: w.task_types || (w as any).taskType ? [(w as any).taskType] : [],
+      type: w.type || 'General',
+      is_active: w.is_active ?? true
+    });
     setIsAdding(true);
   };
 
@@ -84,12 +91,12 @@ export default function WorkstationSettings() {
                     <input
                       type="checkbox"
                       className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-custom-blue focus:ring-custom-blue focus:ring-offset-slate-800"
-                      checked={formData.taskTypes.includes(t.name)}
+                      checked={formData.task_types.includes(t.name)}
                       onChange={e => {
                         const types = e.target.checked
-                          ? [...formData.taskTypes, t.name]
-                          : formData.taskTypes.filter(x => x !== t.name);
-                        setFormData({ ...formData, taskTypes: types });
+                          ? [...formData.task_types, t.name]
+                          : formData.task_types.filter(x => x !== t.name);
+                        setFormData({ ...formData, task_types: types });
                       }}
                     />
                     <span className="text-sm font-medium text-slate-300 group-hover:text-white transition-colors select-none">{t.name}</span>
@@ -102,7 +109,7 @@ export default function WorkstationSettings() {
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
             <button 
               type="button" 
-              onClick={() => { setIsAdding(false); setEditingId(null); setFormData({ name: '', taskTypes: [] }); }}
+              onClick={() => { setIsAdding(false); setEditingId(null); setFormData({ name: '', task_types: [], type: 'General', is_active: true }); }}
               className="px-5 py-2 text-slate-400 hover:text-white transition-colors"
             >
               Cancel
@@ -138,7 +145,7 @@ export default function WorkstationSettings() {
             <div className="flex items-center gap-2 mt-4">
               <span className="text-sm text-slate-500">Tasks:</span>
               <div className="flex flex-wrap gap-1">
-                {(station.taskTypes || ((station as any).taskType ? [(station as any).taskType] : [])).map((tt: string) => (
+                  {(station.task_types || ((station as any).taskType ? [(station as any).taskType] : [])).map((tt: string) => (
                   <span key={tt} className="px-2 py-0.5 bg-slate-800 text-slate-300 rounded-md text-xs font-semibold uppercase tracking-wider">
                     {tt}
                   </span>

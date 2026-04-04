@@ -6,7 +6,7 @@ import { UserPlus, Search, Edit2, Trash2, Shield, User as UserIcon, Building2, B
 import UserRegistrationForm from './users/UserRegistrationForm';
 
 export default function UsersPage() {
-  const { users, updateUser, deleteUser, session, setGeofenceBypass } = useAuth();
+  const { users, updateUser, deleteUser, session } = useAuth();
   const { can } = useRBAC();
   const { settings } = useSettings();
   
@@ -15,7 +15,7 @@ export default function UsersPage() {
   const [editingUser, setEditingUser] = useState<any>(null);
   const [activeEditTab, setActiveEditTab] = useState<'profile' | 'compensation'>('profile');
 
-  const currentUserRole = session.currentUser?.role || 'Worker';
+  const currentUserRole = session.currentUser?.role || 'Staff';
   const canCreate = can(currentUserRole, 'users', 'create');
   const canEdit = can(currentUserRole, 'users', 'edit');
   const canDelete = can(currentUserRole, 'users', 'delete');
@@ -105,47 +105,31 @@ export default function UsersPage() {
                   onChange={e => setEditingUser({...editingUser, role: e.target.value})}
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white outline-none focus:border-custom-blue appearance-none"
                 >
-                  <option value="Worker">Worker</option>
+                  <option value="Staff">Staff</option>
                   <option value="Manager">Manager</option>
                   <option value="Admin">Admin</option>
                 </select>
               </div>
               
-              {editingUser.role === 'Worker' && (
-                <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-2">Assigned Tasks</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {['Ironing', 'Checking', 'Labeling', 'Packing'].map(task => (
-                      <label key={task} className="flex items-center gap-2 bg-slate-800/50 p-2 rounded-lg border border-slate-700 cursor-pointer">
-                        <input 
-                          type="checkbox" 
-                          checked={editingUser.assignedTasks?.includes(task)}
-                          onChange={e => {
-                            const tasks = editingUser.assignedTasks || [];
-                            if (e.target.checked) setEditingUser({...editingUser, assignedTasks: [...tasks, task]});
-                            else setEditingUser({...editingUser, assignedTasks: tasks.filter((t: string) => t !== task)});
-                          }}
-                          className="rounded border-slate-600 bg-slate-700 text-custom-blue"
-                        />
-                        <span className="text-sm text-slate-300">{task}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
               <div>
-                <label className="block text-sm font-medium text-slate-400 mb-1">Organization Location</label>
-                <select 
-                  value={editingUser.locationId || ''} 
-                  onChange={e => setEditingUser({...editingUser, locationId: e.target.value})}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white outline-none focus:border-custom-blue appearance-none"
-                >
-                  <option value="">No specific location (Global)</option>
-                  {(settings.locations || []).map(loc => (
-                    <option key={loc.id} value={loc.id}>{loc.name} ({loc.type})</option>
+                <label className="block text-sm font-medium text-slate-400 mb-2">Assigned Tasks</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {['Ironing', 'Checking', 'Labeling', 'Packing'].map(task => (
+                    <label key={task} className="flex items-center gap-2 bg-slate-800/50 p-2 rounded-lg border border-slate-700 cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={editingUser.assignedTasks?.includes(task)}
+                        onChange={e => {
+                          const tasks = editingUser.assignedTasks || [];
+                          if (e.target.checked) setEditingUser({...editingUser, assignedTasks: [...tasks, task]});
+                          else setEditingUser({...editingUser, assignedTasks: tasks.filter((t: string) => t !== task)});
+                        }}
+                        className="rounded border-slate-600 bg-slate-700 text-custom-blue"
+                      />
+                      <span className="text-sm text-slate-300">{task}</span>
+                    </label>
                   ))}
-                </select>
+                </div>
               </div>
 
               {/* Geofence Bypass Feature */}
@@ -176,16 +160,6 @@ export default function UsersPage() {
                     >
                         {isBypassed(editingUser) ? 'EXTEND BYPASS (24H)' : 'GRANT 24H BYPASS'}
                     </button>
-                    {isBypassed(editingUser) && (
-                        <div className="mt-2 text-center">
-                             <button 
-                                onClick={() => setEditingUser({...editingUser, geofenceBypassUntil: undefined})}
-                                className="text-[9px] text-slate-500 hover:text-red-400 underline underline-offset-2"
-                             >
-                                Remove Bypass Early
-                             </button>
-                        </div>
-                    )}
                 </div>
               )}
 
@@ -193,8 +167,8 @@ export default function UsersPage() {
                 <input 
                   type="checkbox" 
                   id="isActive"
-                  checked={editingUser.isActive} 
-                  onChange={e => setEditingUser({...editingUser, isActive: e.target.checked})}
+                  checked={editingUser.is_active} 
+                  onChange={e => setEditingUser({...editingUser, is_active: e.target.checked})}
                   className="rounded border-slate-600 bg-slate-700 text-custom-blue w-4 h-4 cursor-pointer"
                 />
                 <label htmlFor="isActive" className="text-sm font-medium text-slate-300 cursor-pointer">
@@ -203,50 +177,6 @@ export default function UsersPage() {
               </div>
 
             </div>
-            )}
-
-            {activeEditTab === 'compensation' && (
-              <div className="space-y-6 animate-in fade-in">
-                 <div className="grid grid-cols-2 gap-4">
-                   <div>
-                     <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 ml-1">Basic Salary (Monthly)</label>
-                     <input type="number" 
-                            value={editingUser.salaryStructure?.basic || ''} 
-                            onChange={e => setEditingUser({...editingUser, salaryStructure: {...(editingUser.salaryStructure || {}), basic: Number(e.target.value)}})}
-                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:border-emerald-500 outline-none" />
-                   </div>
-                   <div>
-                     <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 ml-1">HRA</label>
-                     <input type="number" 
-                            value={editingUser.salaryStructure?.hra || ''} 
-                            onChange={e => setEditingUser({...editingUser, salaryStructure: {...(editingUser.salaryStructure || {}), hra: Number(e.target.value)}})}
-                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:border-emerald-500 outline-none" />
-                   </div>
-                   <div className="col-span-2">
-                     <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 ml-1">Other Allowances</label>
-                     <input type="number" 
-                            value={editingUser.salaryStructure?.otherAllowances || ''} 
-                            onChange={e => setEditingUser({...editingUser, salaryStructure: {...(editingUser.salaryStructure || {}), otherAllowances: Number(e.target.value)}})}
-                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:border-emerald-500 outline-none" />
-                   </div>
-                 </div>
-
-                 <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-4">
-                   <h4 className="text-[10px] font-black text-white uppercase tracking-widest border-b border-slate-800 pb-2">Statutory Components</h4>
-                   <div className="flex items-center justify-between">
-                     <span className="text-sm font-medium text-slate-300">EPF Member</span>
-                     <input type="checkbox" checked={editingUser.salaryStructure?.isEpfMember || false} onChange={e => setEditingUser({...editingUser, salaryStructure: {...(editingUser.salaryStructure || {}), isEpfMember: e.target.checked}})} className="rounded bg-slate-700 border-slate-600 text-custom-blue w-4 h-4" />
-                   </div>
-                   <div className="flex items-center justify-between">
-                     <span className="text-sm font-medium text-slate-300">ESI Member</span>
-                     <input type="checkbox" checked={editingUser.salaryStructure?.isEsiMember || false} onChange={e => setEditingUser({...editingUser, salaryStructure: {...(editingUser.salaryStructure || {}), isEsiMember: e.target.checked}})} className="rounded bg-slate-700 border-slate-600 text-custom-blue w-4 h-4" />
-                   </div>
-                   <div className="flex items-center justify-between">
-                     <span className="text-sm font-medium text-slate-300">Professional Tax (PT)</span>
-                     <input type="checkbox" checked={editingUser.salaryStructure?.isPtMember || false} onChange={e => setEditingUser({...editingUser, salaryStructure: {...(editingUser.salaryStructure || {}), isPtMember: e.target.checked}})} className="rounded bg-slate-700 border-slate-600 text-custom-blue w-4 h-4" />
-                   </div>
-                 </div>
-              </div>
             )}
 
             <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-slate-800">
@@ -283,7 +213,6 @@ export default function UsersPage() {
                 <tr className="border-b border-slate-800/60 bg-slate-900/50 text-xs uppercase tracking-wider text-slate-400 font-semibold">
                   <th className="px-6 py-4">Employee</th>
                   <th className="px-6 py-4">Role & Access</th>
-                  <th className="px-6 py-4">Details</th>
                   <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
@@ -291,7 +220,7 @@ export default function UsersPage() {
               <tbody className="divide-y divide-slate-800/60">
                 {filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
+                    <td colSpan={4} className="px-6 py-12 text-center text-slate-400">
                       No users found.
                     </td>
                   </tr>
@@ -309,26 +238,11 @@ export default function UsersPage() {
                               {user.id === session.currentUser?.id && (
                                 <span className="ml-2 px-2 py-0.5 rounded text-[10px] font-bold bg-custom-blue/20 text-custom-blue">YOU</span>
                               )}
-                              {isBypassed(user) && (
-                                <span className="ml-2 flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-black bg-orange-500/10 text-orange-400 border border-orange-500/20">
-                                    <ShieldOff className="w-2.5 h-2.5" />
-                                    BYPASSED
-                                </span>
-                              )}
                             </div>
                             <div className="text-xs text-slate-400 mt-1 flex flex-wrap items-center gap-2">
                               {user.email || 'No email provided'}
                               <span className="text-slate-600">&bull;</span>
-                              <span className="font-mono text-custom-blue bg-custom-blue/10 px-1.5 py-0.5 rounded">PIN: {user.pinCode}</span>
-                              {user.locationId && (
-                                <>
-                                  <span className="text-slate-600">&bull;</span>
-                                  <span className="flex items-center gap-1 text-slate-300">
-                                    <MapPin className="w-3 h-3 text-custom-blue" />
-                                    {(settings.locations || []).find(l => l.id === user.locationId)?.name || 'Unknown Location'}
-                                  </span>
-                                </>
-                              )}
+                              <span className="font-mono text-custom-blue bg-custom-blue/10 px-1.5 py-0.5 rounded">PIN: {user.pin_code}</span>
                             </div>
                           </div>
                         </div>
@@ -340,58 +254,34 @@ export default function UsersPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        {user.role === 'Worker' && user.assignedTasks && (
-                          <div className="flex flex-wrap gap-1">
-                            {user.assignedTasks.map(t => (
-                              <span key={t} className="px-2 py-0.5 rounded text-[10px] uppercase font-semibold bg-teal-500/10 text-teal-400 border border-teal-500/20">
-                                {t}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        {user.role === 'Manager' && (
-                          <span className="text-xs text-slate-500">Manager Access</span>
-                        )}
-                        {user.role === 'Admin' && <span className="text-xs text-slate-500">—</span>}
-                      </td>
-                      <td className="px-6 py-4">
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          user.isActive ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'
+                          user.is_active ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'
                         }`}>
-                          {user.isActive ? 'Active' : 'Inactive'}
+                          {user.is_active ? 'Active' : 'Inactive'}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end space-x-2">
-
-                          {/* Action Buttons */}
-                          {currentUserRole === 'Admin' && (
-                            <button 
-                              onClick={() => {
-                                const newPin = window.prompt(`Enter new 4-6 digit PIN for ${user.name}:`);
-                                if (newPin) {
-                                  if (newPin.length < 4 || newPin.length > 6 || /\D/.test(newPin)) {
-                                    alert('Invalid PIN. Must be 4-6 digits.');
-                                  } else {
-                                    updateUser(user.id, { pinCode: newPin });
-                                    alert('PIN updated successfully.');
-                                  }
+                          <button 
+                            onClick={() => {
+                              const newPin = window.prompt(`Enter new 4-6 digit PIN for ${user.name}:`);
+                              if (newPin) {
+                                if (newPin.length < 4 || newPin.length > 6 || /\D/.test(newPin)) {
+                                  alert('Invalid PIN. Must be 4-6 digits.');
+                                } else {
+                                  updateUser(user.id, { pin_code: newPin });
+                                  alert('PIN updated successfully.');
                                 }
-                              }}
-                              className="p-1.5 text-slate-400 hover:text-custom-blue rounded-lg hover:bg-slate-700 transition-colors"
-                              title="Reset PIN"
-                            >
-                              <Key className="w-4 h-4" />
-                            </button>
-                          )}
+                              }
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-custom-blue rounded-lg hover:bg-slate-700 transition-colors"
+                          >
+                            <Key className="w-4 h-4" />
+                          </button>
                           {canEdit && (
                             <button 
-                              onClick={() => {
-                                setEditingUser(user);
-                                setActiveEditTab('profile');
-                              }}
+                              onClick={() => setEditingUser(user)}
                               className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700 transition-colors"
-                              title="Edit User"
                             >
                               <Edit2 className="w-4 h-4" />
                             </button>
@@ -409,7 +299,6 @@ export default function UsersPage() {
                             </button>
                           )}
                         </div>
-
                       </td>
                     </tr>
                   ))

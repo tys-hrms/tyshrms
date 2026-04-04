@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { useSettings } from '../../contexts/SettingsContext';
 import { Shift } from '../../types';
-import { Clock, Plus, Trash2, Save, CheckCircle2 } from 'lucide-react';
+import { Clock, Plus, Trash2 } from 'lucide-react';
 
 export default function ShiftSettings() {
   const { shifts, addShift, updateShift, deleteShift } = useSettings();
   
   const [isAdding, setIsAdding] = useState(false);
   const [newShift, setNewShift] = useState<Partial<Shift>>({
-    name: '', startTime: '09:00', endTime: '18:00', lunchStart: '13:00', lunchEnd: '14:00'
+    name: '', start_time: '09:00', end_time: '18:00', lunch_start: '13:00', lunch_end: '14:00'
   });
 
   const handleCreate = (e: React.FormEvent) => {
@@ -17,14 +17,14 @@ export default function ShiftSettings() {
     
     addShift({
       name: newShift.name,
-      startTime: newShift.startTime!,
-      endTime: newShift.endTime!,
-      lunchStart: newShift.lunchStart!,
-      lunchEnd: newShift.lunchEnd!
+      start_time: newShift.start_time!,
+      end_time: newShift.end_time!,
+      lunch_start: newShift.lunch_start!,
+      lunch_end: newShift.lunch_end!
     });
     
     setIsAdding(false);
-    setNewShift({ name: '', startTime: '09:00', endTime: '18:00', lunchStart: '13:00', lunchEnd: '14:00' });
+    setNewShift({ name: '', start_time: '09:00', end_time: '18:00', lunch_start: '13:00', lunch_end: '14:00' });
   };
 
   return (
@@ -56,19 +56,19 @@ export default function ShiftSettings() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">Start Time</label>
-              <input required type="time" value={newShift.startTime} onChange={e => setNewShift({...newShift, startTime: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:border-custom-blue outline-none [color-scheme:dark]" />
+              <input required type="time" value={newShift.start_time} onChange={e => setNewShift({...newShift, start_time: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:border-custom-blue outline-none [color-scheme:dark]" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">End Time</label>
-              <input required type="time" value={newShift.endTime} onChange={e => setNewShift({...newShift, endTime: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:border-custom-blue outline-none [color-scheme:dark]" />
+              <input required type="time" value={newShift.end_time} onChange={e => setNewShift({...newShift, end_time: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:border-custom-blue outline-none [color-scheme:dark]" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">Lunch Start</label>
-              <input required type="time" value={newShift.lunchStart} onChange={e => setNewShift({...newShift, lunchStart: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:border-custom-blue outline-none [color-scheme:dark]" />
+              <input required type="time" value={newShift.lunch_start} onChange={e => setNewShift({...newShift, lunch_start: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:border-custom-blue outline-none [color-scheme:dark]" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">Lunch End</label>
-              <input required type="time" value={newShift.lunchEnd} onChange={e => setNewShift({...newShift, lunchEnd: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:border-custom-blue outline-none [color-scheme:dark]" />
+              <input required type="time" value={newShift.lunch_end} onChange={e => setNewShift({...newShift, lunch_end: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:border-custom-blue outline-none [color-scheme:dark]" />
             </div>
           </div>
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
@@ -93,13 +93,13 @@ export default function ShiftSettings() {
                 <div className="flex items-center text-slate-400">
                   <Clock className="w-4 h-4 mr-2" /> Working Hours
                 </div>
-                <span className="font-medium text-white">{shift.startTime} - {shift.endTime}</span>
+                <span className="font-medium text-white">{shift.start_time} - {shift.end_time}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center text-orange-400/80">
                   <Clock className="w-4 h-4 mr-2" /> Lunch Break
                 </div>
-                <span className="font-medium text-slate-300">{shift.lunchStart} - {shift.lunchEnd}</span>
+                <span className="font-medium text-slate-300">{shift.lunch_start} - {shift.lunch_end}</span>
               </div>
             </div>
           </div>

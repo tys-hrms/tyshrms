@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, X, CheckCircle2, AlertCircle, Clock, Layout, Package, Users } from 'lucide-react';
+import { Bell, X, CheckCircle2, AlertCircle, Clock, Layout } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -14,9 +14,9 @@ export default function NotificationCenter({ isOpen, onClose }: NotificationCent
   const role = session.currentUser?.role || 'Worker';
 
   const myNotifications = notifications.filter(n => 
-    n.userId === session.currentUser?.id || 
-    (n.userId === 'broadcast_all' && (role === 'Admin' || role === 'Manager'))
-  ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    n.user_id === session.currentUser?.id || 
+    (n.user_id === 'broadcast_all' && (role === 'Admin' || role === 'Manager'))
+  ).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   const unreadCount = myNotifications.filter(n => !n.read).length;
 
@@ -98,7 +98,7 @@ export default function NotificationCenter({ isOpen, onClose }: NotificationCent
                                     {n.title}
                                  </h4>
                                  <span className="text-[10px] text-slate-600 font-bold uppercase tracking-widest">
-                                    {new Date(n.createdAt).toLocaleTimeString()}
+                                    {new Date(n.created_at).toLocaleTimeString()}
                                  </span>
                               </div>
                               <p className="text-sm text-slate-500 leading-relaxed group-hover:text-slate-300 transition-colors">

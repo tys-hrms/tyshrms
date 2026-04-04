@@ -24,10 +24,10 @@ interface CRMContextType {
 
 const CRMContext = createContext<CRMContextType | undefined>(undefined);
 
-const DEFAULT_CRM_SETTINGS: Omit<CRMSettings, 'tenantId'> = {
-  ticketPrefix: 'TKT',
-  enableSmartAssignment: true,
-  slaConfig: {
+const DEFAULT_CRM_SETTINGS: Omit<CRMSettings, 'tenant_id'> = {
+  ticket_prefix: 'TKT',
+  enable_smart_assignment: true,
+  sla_config: {
     whatsapp: 30,
     instagram: 60,
     facebook: 60,
@@ -48,7 +48,7 @@ const DEFAULT_CRM_SETTINGS: Omit<CRMSettings, 'tenantId'> = {
     { label: 'GST Verified', color: '#10b981' },
     { label: 'SLA Breach', color: '#f97316' },
   ],
-  escalationUserIds: []
+  escalation_user_ids: []
 };
 
 export function CRMProvider({ children }: { children: ReactNode }) {
@@ -58,9 +58,9 @@ export function CRMProvider({ children }: { children: ReactNode }) {
   const [leads, setLeads] = useState<CRMLead[]>([]);
   const [orders, setOrders] = useState<CRMOrder[]>([]);
   const [crmSettings, setCrmSettings] = useState<CRMSettings>({
-    tenantId: session.tenant?.id || '',
+    tenant_id: session.tenant?.id || '',
     ...DEFAULT_CRM_SETTINGS
-  });
+  } as CRMSettings);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<number>(Date.now());
@@ -71,16 +71,16 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     if (!tenantId) return;
     try {
       const [leadsData, ordersData, settingsData] = await Promise.all([
-        db.request('find', 'crm_leads', { filter: { tenantId } }),
-        db.request('find', 'crm_orders', { filter: { tenantId } }),
-        db.request('findOne', 'crm_settings', { filter: { tenantId } })
+        db.request('find', 'crm_leads', { filter: { tenant_id: tenantId } }),
+        db.request('find', 'crm_orders', { filter: { tenant_id: tenantId } }),
+        db.request('findOne', 'crm_settings', { filter: { tenant_id: tenantId } })
       ]);
 
       if (leadsData.documents) setLeads(leadsData.documents);
       if (ordersData.documents) setOrders(ordersData.documents);
       if (settingsData.document) setCrmSettings(settingsData.document);
       else {
-        const initSettings = { ...DEFAULT_CRM_SETTINGS, tenantId };
+        const initSettings = { ...DEFAULT_CRM_SETTINGS, tenant_id: tenantId };
         await db.save('crm_settings', initSettings);
         setCrmSettings(initSettings as CRMSettings);
       }
@@ -115,13 +115,13 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     const year = now.getFullYear();
     const dateStr = `${String(now.getDate()).padStart(2, '0')}${String(now.getMonth() + 1).padStart(2, '0')}`;
     const sequence = String(leads.length + 1).padStart(6, '0');
-    return `${crmSettings.ticketPrefix}-${year}-${dateStr}-${sequence}`;
-  }, [crmSettings.ticketPrefix, leads.length]);
+    return `${crmSettings.ticket_prefix}-${year}-${dateStr}-${sequence}`;
+  }, [crmSettings.ticket_prefix, leads.length]);
 
-  const determineAssignment = useCallback((): { primaryRepId?: string, taggedRepIds: string[], assignedManagerId?: string } => {
-    if (!crmSettings.enableSmartAssignment) return { taggedRepIds: [] };
+  const determineAssignment = useCallback((): { primary_rep_id?: string, tagged_rep_ids: string[], assigned_manager_id?: string } => {
+    if (!crmSettings.enable_smart_assignment) return { tagged_rep_ids: [] };
     const today = new Date().toISOString().split('T')[0];
-    const clockedInUserIds = attendanceLogs.filter(log => log.date === today && log.clockIn && !log.clockOut).map(log => log.userId);
+    const clockedInUserIds = attendanceLogs.filter(log => log.date === today && log.clock_in && !log.clock_out).map(log => log.user_id);
     const activeUsers = users.filter(u => clockedInUserIds.includes(u.id));
     const activeReps = activeUsers.filter(u => u.role.toLowerCase().includes('sale') || u.role.toLowerCase().includes('worker'));
     const activeManagers = activeUsers.filter(u => u.role.toLowerCase().includes('manager'));
@@ -130,49 +130,49 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     if (activeReps.length > 0) {
       const repLeadCounts = activeReps.map(rep => ({
         id: rep.id,
-        count: leads.filter(l => l.primaryRepId === rep.id && l.status === 'active').length
+        count: leads.filter(l => l.primary_rep_id === rep.id && l.status === 'active').length
       })).sort((a, b) => a.count - b.count);
-      return { primaryRepId: repLeadCounts[0].id, taggedRepIds: [] };
+      return { primary_rep_id: repLeadCounts[0].id, tagged_rep_ids: [] };
     }
-    if (activeManagers.length > 0) return { assignedManagerId: activeManagers[0].id, taggedRepIds: [] };
-    if (activeAdmins.length > 0) return { assignedManagerId: activeAdmins[0].id, taggedRepIds: [] };
-    return { taggedRepIds: [] };
-  }, [crmSettings.enableSmartAssignment, attendanceLogs, users, leads]);
+    if (activeManagers.length > 0) return { assigned_manager_id: activeManagers[0].id, tagged_rep_ids: [] };
+    if (activeAdmins.length > 0) return { assigned_manager_id: activeAdmins[0].id, tagged_rep_ids: [] };
+    return { tagged_rep_ids: [] };
+  }, [crmSettings.enable_smart_assignment, attendanceLogs, users, leads]);
 
   const createLead = async (data: Partial<CRMLead>): Promise<string> => {
     if (!tenantId) throw new Error('Tenant context missing');
 
-    const ticketNumber = generateTicketNumber();
+    const ticket_number = generateTicketNumber();
     const assignment = determineAssignment();
-    const slaMinutes = crmSettings.slaConfig[data.source || 'manual'] || 1440;
-    const slaBreachAt = new Date(Date.now() + slaMinutes * 60000).toISOString();
+    const slaMinutes = crmSettings.sla_config[data.source || 'manual'] || 1440;
+    const sla_breach_at = new Date(Date.now() + slaMinutes * 60000).toISOString();
 
     const newLead: CRMLead = {
       id: `${tenantId}_${Date.now()}`,
-      ticketNumber,
-      tenantId,
-      customerName: data.customerName || 'New Inquiry',
+      ticket_number,
+      tenant_id: tenantId,
+      customer_name: data.customer_name || 'New Inquiry',
       phone: data.phone || '',
       source: data.source || 'manual',
       stage: crmSettings.stages[0].id,
       status: 'active',
       priority: data.priority || 'medium',
       items: [],
-      transportationCharges: 0,
-      totalValue: 0,
+      transportation_charges: 0,
+      total_value: 0,
       currency: 'INR',
-      isGstCompliant: data.isGstCompliant || false,
-      businessType: data.businessType || '',
-      leadTemperature: data.leadTemperature || 'Warm',
-      expectedTimeline: data.expectedTimeline || 'Immediate',
-      clientCategory: data.clientCategory || 'B2C',
+      is_gst_compliant: data.is_gst_compliant || false,
+      business_type: data.business_type || '',
+      lead_temperature: data.lead_temperature || 'Warm',
+      expected_timeline: data.expected_timeline || 'Immediate',
+      client_category: data.client_category || 'B2C',
       ...assignment,
       ...data,
-      taggedRepIds: Array.from(new Set([...(assignment.taggedRepIds || []), ...(data.taggedRepIds || [])])),
-      isBreached: false,
-      slaBreachAt,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      tagged_rep_ids: Array.from(new Set([...(assignment.tagged_rep_ids || []), ...(data.tagged_rep_ids || [])])),
+      is_breached: false,
+      sla_breach_at,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
 
     setLeads(prev => [...prev, newLead]);
@@ -187,16 +187,16 @@ export function CRMProvider({ children }: { children: ReactNode }) {
 
   const updateLead = async (id: string, updates: Partial<CRMLead>) => {
     const now = new Date().toISOString();
-    setLeads(prev => prev.map(l => l.id === id ? { ...l, ...updates, updatedAt: now } : l));
+    setLeads(prev => prev.map(l => l.id === id ? { ...l, ...updates, updated_at: now } : l));
     const target = leads.find(l => l.id === id);
     if (target) {
         setIsSyncing(true);
-        try { await db.save('crm_leads', { ...target, ...updates, updatedAt: now }); } finally { setIsSyncing(false); }
+        try { await db.save('crm_leads', { ...target, ...updates, updated_at: now }); } finally { setIsSyncing(false); }
     }
   };
 
   const assignLead = async (leadId: string, repIds: string[]) => {
-    await updateLead(leadId, { taggedRepIds: repIds });
+    await updateLead(leadId, { tagged_rep_ids: repIds });
   };
 
   const convertToOrder = async (leadId: string): Promise<string> => {
@@ -206,18 +206,18 @@ export function CRMProvider({ children }: { children: ReactNode }) {
     const now = new Date().toISOString();
     const newOrder: CRMOrder = {
       id: `ORD_${leadId}`,
-      ticketNumber: lead.ticketNumber,
-      tenantId: lead.tenantId,
-      leadId: lead.id,
-      customerId: lead.id,
+      ticket_number: lead.ticket_number,
+      tenant_id: lead.tenant_id,
+      lead_id: lead.id,
+      customer_id: lead.id,
       items: lead.items,
-      totalValue: lead.totalValue,
-      fulfillmentStatus: 'ordered',
-      createdAt: now
+      total_value: lead.total_value,
+      fulfillment_status: 'ordered',
+      created_at: now
     };
 
     setOrders(prev => [...prev, newOrder]);
-    const wonLead = { ...lead, status: 'won' as const, convertedOrderId: newOrder.id, updatedAt: now };
+    const wonLead = { ...lead, status: 'won' as const, converted_order_id: newOrder.id, updated_at: now };
     setLeads(prev => prev.map(l => l.id === leadId ? wonLead : l));
 
     setIsSyncing(true);

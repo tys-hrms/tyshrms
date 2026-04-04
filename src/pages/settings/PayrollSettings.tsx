@@ -30,14 +30,19 @@ export default function PayrollSettings() {
   
   // Local state for payroll settings
   const [state, setState] = useState<string>(settings.state || 'Maharashtra');
-  const [payroll, setPayroll] = useState<any>(settings.payrollSettings || {
-    epfEnabled: true,
-    esiEnabled: true,
-    ptEnabled: true,
-    gratuityEnabled: true,
-    gstNumber: '',
-    panNumber: '',
-    holidayList: [],
+  const [payroll, setPayroll] = useState<any>(settings.payroll_settings || {
+    epf_enabled: true,
+    epf_rate: 12,
+    esi_enabled: true,
+    esi_rate: 0.75,
+    pt_enabled: true,
+    pt_threshold: 10000,
+    pt_amount: 200,
+    ot_multiplier: 1.5,
+    gratuity_enabled: true,
+    gst_number: '',
+    pan_number: '',
+    holiday_list: [],
     weekends: [0] // Default to Sunday
   });
 
@@ -48,7 +53,7 @@ export default function PayrollSettings() {
     try {
       await updateSettings({
         state: state,
-        payrollSettings: payroll
+        payroll_settings: payroll
       });
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 3000);
@@ -61,7 +66,7 @@ export default function PayrollSettings() {
     if (!newHoliday.date || !newHoliday.label) return;
     setPayroll((prev: any) => ({
       ...prev,
-      holidayList: [...prev.holidayList, newHoliday].sort((a, b) => a.date.localeCompare(b.date))
+      holiday_list: [...(prev.holiday_list || []), newHoliday].sort((a, b) => a.date.localeCompare(b.date))
     }));
     setNewHoliday({ date: '', label: '', isWorking: false });
   };
@@ -69,7 +74,7 @@ export default function PayrollSettings() {
   const removeHoliday = (idx: number) => {
     setPayroll((prev: any) => ({
       ...prev,
-      holidayList: prev.holidayList.filter((_: any, i: number) => i !== idx)
+      holiday_list: (prev.holiday_list || []).filter((_: any, i: number) => i !== idx)
     }));
   };
 
@@ -117,8 +122,8 @@ export default function PayrollSettings() {
                       <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1.5 pl-1">Business GSTIN</label>
                       <input 
                         type="text"
-                        value={payroll.gstNumber || ''}
-                        onChange={e => setPayroll((prev: any) => ({ ...prev, gstNumber: e.target.value.toUpperCase() }))}
+                        value={payroll.gst_number || ''}
+                        onChange={e => setPayroll((prev: any) => ({ ...prev, gst_number: e.target.value.toUpperCase() }))}
                         placeholder="27AAAAA0000A1Z5"
                         className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:border-custom-blue outline-none transition-all font-mono"
                       />
@@ -127,8 +132,8 @@ export default function PayrollSettings() {
                       <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1.5 pl-1">Enterprise PAN</label>
                       <input 
                         type="text"
-                        value={payroll.panNumber || ''}
-                        onChange={e => setPayroll((prev: any) => ({ ...prev, panNumber: e.target.value.toUpperCase() }))}
+                        value={payroll.pan_number || ''}
+                        onChange={e => setPayroll((prev: any) => ({ ...prev, pan_number: e.target.value.toUpperCase() }))}
                         placeholder="ABCDE1234F"
                         className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:border-custom-blue outline-none transition-all font-mono"
                       />
@@ -167,6 +172,51 @@ export default function PayrollSettings() {
                 })}
              </div>
              <p className="text-[10px] text-slate-500 font-medium italic">Selected days will be automatically excluded from working-day counts during payroll processing.</p>
+          </div>
+
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-6">
+             <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center">
+                   <IndianRupee className="w-5 h-5 text-emerald-500" />
+                </div>
+                <div>
+                   <h3 className="text-sm font-black text-white uppercase tracking-widest">Statutory Rates</h3>
+                   <p className="text-[10px] text-slate-500 font-bold uppercase">Configure EPF, ESI and PT parameters</p>
+                </div>
+             </div>
+
+             <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                   <label className="text-[8px] text-slate-500 font-black uppercase tracking-widest mb-1.5 pl-1">EPF Rate (%)</label>
+                   <input type="number" step="0.1" value={payroll.epf_rate || 12} onChange={e => setPayroll((p: any) => ({ ...p, epf_rate: parseFloat(e.target.value) }))} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:border-custom-blue outline-none" />
+                </div>
+                <div className="space-y-1">
+                   <label className="text-[8px] text-slate-500 font-black uppercase tracking-widest mb-1.5 pl-1">ESI Rate (%)</label>
+                   <input type="number" step="0.01" value={payroll.esi_rate || 0.75} onChange={e => setPayroll((p: any) => ({ ...p, esi_rate: parseFloat(e.target.value) }))} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:border-custom-blue outline-none" />
+                </div>
+                <div className="space-y-1">
+                   <label className="text-[8px] text-slate-500 font-black uppercase tracking-widest mb-1.5 pl-1">PT Threshold (₹)</label>
+                   <input type="number" value={payroll.pt_threshold || 10000} onChange={e => setPayroll((p: any) => ({ ...p, pt_threshold: parseInt(e.target.value) }))} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:border-custom-blue outline-none" />
+                </div>
+                <div className="space-y-1">
+                   <label className="text-[8px] text-slate-500 font-black uppercase tracking-widest mb-1.5 pl-1">PT Amount (₹)</label>
+                   <input type="number" value={payroll.pt_amount || 200} onChange={e => setPayroll((p: any) => ({ ...p, pt_amount: parseInt(e.target.value) }))} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:border-custom-blue outline-none" />
+                </div>
+             </div>
+
+             <div className="pt-4 border-t border-slate-800/50">
+                <div className="flex items-center gap-3 mb-4">
+                   <div className="w-8 h-8 bg-indigo-500/10 rounded-lg flex items-center justify-center">
+                      <Settings2 className="w-4 h-4 text-indigo-500" />
+                   </div>
+                   <h4 className="text-[10px] font-black text-white uppercase tracking-widest">Overtime Computation</h4>
+                </div>
+                <div className="space-y-1">
+                   <label className="text-[8px] text-slate-500 font-black uppercase tracking-widest mb-1.5 pl-1">OT Multiplier (e.g., 1.5x)</label>
+                   <input type="number" step="0.1" value={payroll.ot_multiplier || 1.5} onChange={e => setPayroll((p: any) => ({ ...p, ot_multiplier: parseFloat(e.target.value) }))} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:border-custom-blue outline-none" />
+                   <p className="text-[9px] text-slate-600 font-bold uppercase mt-1 italic pl-1">Multiplier applied to the effective hourly rate.</p>
+                </div>
+             </div>
           </div>
         </div>
 
@@ -225,7 +275,7 @@ export default function PayrollSettings() {
               </div>
 
               <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                 {(payroll.holidayList || []).map((h: any, i: number) => (
+                 {(payroll.holiday_list || []).map((h: any, i: number) => (
                    <div key={i} className="group bg-slate-950/50 border border-slate-800 rounded-xl p-3 flex items-center justify-between hover:border-slate-700 transition-all">
                       <div className="flex items-center gap-4">
                          <div className="text-center bg-slate-900 px-2 py-1 rounded border border-slate-800 min-w-[50px]">
@@ -235,7 +285,7 @@ export default function PayrollSettings() {
                          <div>
                             <p className="text-xs font-bold text-slate-200">{h.label}</p>
                             <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter">
-                               Attendance Credit: <span className="text-emerald-500 font-black">100% PAID</span>
+                                Attendance Credit: <span className="text-emerald-500 font-black">100% PAID</span>
                             </p>
                          </div>
                       </div>
@@ -247,7 +297,7 @@ export default function PayrollSettings() {
                       </button>
                    </div>
                  ))}
-                 {(!payroll.holidayList || payroll.holidayList.length === 0) && (
+                 {(!payroll.holiday_list || payroll.holiday_list.length === 0) && (
                    <div className="py-12 border-2 border-dashed border-slate-800 rounded-3xl text-center">
                       <p className="text-xs font-bold text-slate-600 uppercase tracking-widest">No holidays defined</p>
                    </div>

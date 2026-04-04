@@ -23,7 +23,7 @@ export default function AttendanceGrid({ month, logs }: AttendanceGridProps) {
     
     users.filter(u => u.role === 'Worker').forEach(user => {
       data[user.id] = {};
-      const userLogs = logs.filter(l => l.userId === user.id && l.date.startsWith(month));
+      const userLogs = logs.filter(l => l.user_id === user.id && l.date.startsWith(month));
       userLogs.forEach(log => {
         const day = parseInt(log.date.split('-')[2]);
         data[user.id][day] = log;
@@ -39,7 +39,6 @@ export default function AttendanceGrid({ month, logs }: AttendanceGridProps) {
     switch (log.status) {
       case 'present': return <div className="w-full h-full flex items-center justify-center bg-emerald-500/10 text-emerald-500"><CheckCircle2 className="w-3.5 h-3.5" /></div>;
       case 'absent': return <div className="w-full h-full flex items-center justify-center bg-rose-500/10 text-rose-500"><XCircle className="w-3.5 h-3.5" /></div>;
-      case 'on_leave': return <div className="w-full h-full flex items-center justify-center bg-amber-500/10 text-amber-500"><Clock className="w-3.5 h-3.5" /></div>;
       case 'half_day': return <div className="w-full h-full flex items-center justify-center bg-blue-500/10 text-blue-500"><AlertCircle className="w-3.5 h-3.5" /></div>;
       default: return null;
     }

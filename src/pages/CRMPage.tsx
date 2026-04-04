@@ -6,12 +6,13 @@ import {
   Facebook, Linkedin, Youtube, Users, HelpCircle, 
   ChevronRight, Calendar, User, IndianRupee, Briefcase, 
   Clock, AlertCircle, CheckCircle2, Package, X,
-  Thermometer, Flame, Sun, Building2, FileText
+  Thermometer, Flame, Sun, Building2, FileText, Settings as SettingsIcon
 } from 'lucide-react';
 import { CRMLead, CRMLeadSource } from '../types';
 import LeadRegistrationForm from './crm/LeadRegistrationForm';
 import LeadPricingLedger from './crm/LeadPricingLedger';
 import LeadInteractionLog from './crm/LeadInteractionLog';
+import CRMLocalSettings from './crm/CRMLocalSettings';
 import { useRBAC } from '../contexts/RBACContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
@@ -36,7 +37,7 @@ export default function CRMPage() {
   const { users } = useAuth();
   const currentRole = session.currentUser?.role || 'Worker';
   
-  const [view, setView] = useState<'kanban' | 'list'>('kanban');
+  const [view, setView] = useState<'kanban' | 'list' | 'settings'>('kanban');
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
@@ -54,8 +55,8 @@ export default function CRMPage() {
   }
 
   const filteredLeads = leads.filter(l => 
-    l.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    l.ticketNumber.toLowerCase().includes(searchQuery.toLowerCase())
+    l.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    l.ticket_number.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const renderTemperatureBadge = (temp: 'Cold' | 'Warm' | 'Hot') => {
@@ -97,6 +98,12 @@ export default function CRMPage() {
               >
                 <List className="w-4 h-4" />
               </button>
+              <button 
+                onClick={() => setView('settings')}
+                className={`p-2 rounded-lg transition-all ${view === 'settings' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+              >
+                <SettingsIcon className="w-4 h-4" />
+              </button>
            </div>
 
            <button 
@@ -126,7 +133,9 @@ export default function CRMPage() {
       </div>
 
       {/* ─── Main Content ─── */}
-      {view === 'kanban' ? (
+      {view === 'settings' ? (
+         <CRMLocalSettings />
+      ) : view === 'kanban' ? (
         <div className="flex gap-6 overflow-x-auto pb-6 custom-scrollbar">
           {settings.stages.map(stage => {
             const stageLeads = filteredLeads.filter(l => l.stage === stage.id && l.status === 'active');
@@ -149,7 +158,7 @@ export default function CRMPage() {
                         key={lead.id}
                         onClick={() => setSelectedLeadId(lead.id)}
                         className={`group bg-slate-900 border-2 rounded-3xl p-4 cursor-pointer transition-all hover:translate-y-[-2px] shadow-xl hover:shadow-2xl ${
-                           lead.isBreached ? 'border-rose-500/30 bg-rose-500/[0.02]' : 'border-slate-800 hover:border-custom-blue/30'
+                           lead.is_breached ? 'border-rose-500/30 bg-rose-500/[0.02]' : 'border-slate-800 hover:border-custom-blue/30'
                         }`}
                       >
                          <div className="flex items-center justify-between mb-3 text-[9px] font-black uppercase tracking-widest text-slate-500">
@@ -157,19 +166,19 @@ export default function CRMPage() {
                                 <span className="flex items-center gap-1.5 px-2 py-1 bg-slate-950 rounded-lg">
                                    {renderSourceIcon(lead.source)} {lead.source}
                                 </span>
-                                {renderTemperatureBadge(lead.leadTemperature || 'Warm')}
+                                {renderTemperatureBadge(lead.lead_temperature || 'Warm')}
                              </div>
-                             <span className="group-hover:text-custom-blue transition-colors">{lead.ticketNumber}</span>
+                             <span className="group-hover:text-custom-blue transition-colors">{lead.ticket_number}</span>
                           </div>
                          
-                         <h4 className="text-sm font-bold text-white mb-1 group-hover:text-custom-blue transition-colors line-clamp-1">{lead.customerName}</h4>
+                         <h4 className="text-sm font-bold text-white mb-1 group-hover:text-custom-blue transition-colors line-clamp-1">{lead.customer_name}</h4>
                          <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-medium italic mb-4">
-                            <Briefcase className="w-3 h-3" /> {lead.companyName || 'Individual Contact'}
+                            <Briefcase className="w-3 h-3" /> {lead.company_name || 'Individual Contact'}
                          </div>
 
                          <div className="flex items-center justify-between pt-3 border-t border-slate-800/50">
                             <div className="flex -space-x-1.5">
-                               {[lead.primaryRepId, ...lead.taggedRepIds].filter(Boolean).map((rid, iter) => (
+                               {[lead.primary_rep_id, ...lead.tagged_rep_ids].filter(Boolean).map((rid, iter) => (
                                   <div key={rid} className="w-6 h-6 rounded-lg bg-slate-800 border border-slate-900 text-[9px] font-bold text-slate-400 flex items-center justify-center">
                                      {iter + 1}
                                   </div>
@@ -177,11 +186,11 @@ export default function CRMPage() {
                             </div>
                             <div className="text-right">
                                <p className="text-[10px] text-slate-600 font-bold mb-0.5">EST. VALUE</p>
-                               <span className="text-xs font-black text-white font-mono">₹{lead.totalValue.toLocaleString()}</span>
+                               <span className="text-xs font-black text-white font-mono">₹{lead.total_value.toLocaleString()}</span>
                             </div>
                          </div>
                          
-                         {lead.isBreached && (
+                         {lead.is_breached && (
                             <div className="mt-3 flex items-center gap-1.5 text-[9px] font-black text-rose-500 animate-pulse uppercase tracking-widest">
                                <Clock className="w-3 h-3" /> SLA Breach 
                             </div>
@@ -221,19 +230,19 @@ export default function CRMPage() {
                                 {renderSourceIcon(lead.source)}
                              </div>
                              <div>
-                                <p className="text-xs font-black text-white">{lead.ticketNumber}</p>
+                                <p className="text-xs font-black text-white">{lead.ticket_number}</p>
                                 <p className="text-[10px] text-slate-500 uppercase tracking-tighter mt-0.5">{lead.source}</p>
                              </div>
                           </div>
                        </td>
                        <td className="px-6 py-4">
-                          <p className="text-xs font-bold text-white uppercase">{lead.customerName}</p>
-                          <p className="text-[10px] text-slate-500 mt-0.5 italic">{lead.companyName || '—'}</p>
+                          <p className="text-xs font-bold text-white uppercase">{lead.customer_name}</p>
+                          <p className="text-[10px] text-slate-500 mt-0.5 italic">{lead.company_name || '—'}</p>
                        </td>
                        <td className="px-6 py-4">
-                          <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[10px] font-black uppercase tracking-tight ${lead.clientCategory === 'B2B' ? 'bg-purple-500/10 border-purple-500/20 text-purple-400' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'}`}>
-                             {lead.clientCategory === 'B2B' ? <Building2 className="w-3 h-3" /> : <User className="w-3 h-3" />}
-                             {lead.clientCategory}
+                          <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[10px] font-black uppercase tracking-tight ${lead.client_category === 'B2B' ? 'bg-purple-500/10 border-purple-500/20 text-purple-400' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'}`}>
+                             {lead.client_category === 'B2B' ? <Building2 className="w-3 h-3" /> : <User className="w-3 h-3" />}
+                             {lead.client_category}
                           </div>
                        </td>
                        <td className="px-6 py-4">
@@ -241,17 +250,17 @@ export default function CRMPage() {
                              <span className="text-[10px] font-black px-2 py-0.5 rounded-lg border border-slate-700 bg-slate-950 inline-block w-fit uppercase">
                                 {lead.stage.replace('_', ' ')}
                              </span>
-                             {lead.isBreached && <span className="text-[9px] font-black text-rose-500 animate-pulse uppercase">SLA Breach</span>}
+                             {lead.is_breached && <span className="text-[9px] font-black text-rose-500 animate-pulse uppercase">SLA Breach</span>}
                           </div>
                        </td>
                        <td className="px-6 py-4">
                           <div className="flex items-center gap-2 text-slate-400">
                              <Calendar className="w-3 h-3" />
-                             <span className="text-[10px] font-bold">{lead.nextFollowUpAt ? new Date(lead.nextFollowUpAt).toLocaleDateString() : 'Unscheduled'}</span>
+                             <span className="text-[10px] font-bold">{lead.next_follow_up_at ? new Date(lead.next_follow_up_at).toLocaleDateString() : 'Unscheduled'}</span>
                           </div>
                        </td>
                        <td className="px-6 py-4">
-                          <span className="text-sm font-black text-white font-mono">₹{lead.totalValue.toLocaleString()}</span>
+                          <span className="text-sm font-black text-white font-mono">₹{lead.total_value.toLocaleString()}</span>
                        </td>
                        <td className="px-6 py-4 text-right">
                           <button className="p-2 text-slate-500 hover:text-custom-blue">
@@ -273,7 +282,7 @@ export default function CRMPage() {
                   <div className="p-2 bg-custom-blue/10 rounded-lg">
                       <Briefcase className="w-4 h-4 text-custom-blue" />
                   </div>
-                  <h3 className="font-black text-white uppercase text-xs tracking-widest">{selectedLead.ticketNumber}</h3>
+                  <h3 className="font-black text-white uppercase text-xs tracking-widest">{selectedLead.ticket_number}</h3>
                </div>
                <button onClick={() => setSelectedLeadId(null)} className="p-2 text-slate-500 hover:text-white rounded-lg">
                   <X className="w-5 h-5" />
@@ -285,20 +294,20 @@ export default function CRMPage() {
                <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-1">
                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Customer</p>
-                     <p className="text-lg font-bold text-white">{selectedLead.customerName}</p>
+                     <p className="text-lg font-bold text-white">{selectedLead.customer_name}</p>
                      <p className="text-xs text-slate-400">{selectedLead.email || 'No email provided'}</p>
                   </div>
                   <div className="text-right space-y-1">
                       <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Status / Intelligence</p>
                       <div className="flex items-center justify-end gap-2">
-                         <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[10px] font-black uppercase tracking-tight ${selectedLead.clientCategory === 'B2B' ? 'bg-purple-500/10 border-purple-500/20 text-purple-400' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'}`}>
-                            {selectedLead.clientCategory === 'B2B' ? <Building2 className="w-3 h-3" /> : <User className="w-3 h-3" />}
-                            {selectedLead.clientCategory}
+                         <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[10px] font-black uppercase tracking-tight ${selectedLead.client_category === 'B2B' ? 'bg-purple-500/10 border-purple-500/20 text-purple-400' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'}`}>
+                            {selectedLead.client_category === 'B2B' ? <Building2 className="w-3 h-3" /> : <User className="w-3 h-3" />}
+                            {selectedLead.client_category}
                          </div>
-                         {renderTemperatureBadge(selectedLead.leadTemperature || 'Warm')}
+                         {renderTemperatureBadge(selectedLead.lead_temperature || 'Warm')}
                          <select 
                            value={selectedLead.stage}
-                           onChange={e => updateLead(selectedLead.id, { stage: e.target.value })}
+                           onChange={e => updateLead(selectedLead.id, { stage: e.target.value as any })}
                            className="bg-slate-950 border border-slate-800 text-[10px] font-black uppercase text-white rounded-lg px-3 py-1.5"
                          >
                             {settings.stages.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
@@ -308,14 +317,14 @@ export default function CRMPage() {
                 </div>
 
                 {/* Lead Brief (New V10.1 Requirement) */}
-                {selectedLead.leadBrief && (
+                {selectedLead.lead_brief && (
                   <div className="bg-amber-500/5 border border-amber-500/10 rounded-3xl p-5 animate-in slide-in-from-top-4 duration-500">
                      <div className="flex items-center gap-2 mb-3">
                         <FileText className="w-4 h-4 text-amber-500" />
                         <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Client Brief / Requirements</h4>
                      </div>
                      <p className="text-xs text-slate-300 leading-relaxed italic whitespace-pre-wrap">
-                        "{selectedLead.leadBrief}"
+                        "{selectedLead.lead_brief}"
                      </p>
                   </div>
                 )}
@@ -328,7 +337,7 @@ export default function CRMPage() {
                      </div>
                      <div>
                        <p className="text-[10px] font-black text-slate-600 uppercase tracking-wider">Business Vertical</p>
-                       <p className="text-xs font-bold text-slate-200 mt-0.5">{selectedLead.businessType || 'Unspecified'}</p>
+                       <p className="text-xs font-bold text-slate-200 mt-0.5">{selectedLead.business_type || 'Unspecified'}</p>
                      </div>
                   </div>
                   <div className="flex items-start gap-3">
@@ -337,7 +346,7 @@ export default function CRMPage() {
                      </div>
                      <div>
                        <p className="text-[10px] font-black text-slate-600 uppercase tracking-wider">Expected Timeline</p>
-                       <p className="text-xs font-bold text-slate-200 mt-0.5">{selectedLead.expectedTimeline || 'Not Disclosed'}</p>
+                       <p className="text-xs font-bold text-slate-200 mt-0.5">{selectedLead.expected_timeline || 'Not Disclosed'}</p>
                      </div>
                   </div>
                </div>
@@ -348,16 +357,16 @@ export default function CRMPage() {
                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Targeted Team</p>
                      <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-2">
                         {users.filter(u => u.role !== 'Worker').map(user => {
-                           const isPrimary = selectedLead.primaryRepId === user.id;
-                           const isTagged = selectedLead.taggedRepIds?.includes(user.id);
+                           const isPrimary = selectedLead.primary_rep_id === user.id;
+                           const isTagged = selectedLead.tagged_rep_ids?.includes(user.id);
                            return (
                               <button 
                                 key={user.id}
                                 onClick={() => {
                                    const nextTags = isTagged 
-                                      ? selectedLead.taggedRepIds.filter(id => id !== user.id)
-                                      : [...(selectedLead.taggedRepIds || []), user.id];
-                                   updateLead(selectedLead.id, { taggedRepIds: nextTags });
+                                      ? selectedLead.tagged_rep_ids.filter(id => id !== user.id)
+                                      : [...(selectedLead.tagged_rep_ids || []), user.id];
+                                   updateLead(selectedLead.id, { tagged_rep_ids: nextTags });
                                 }}
                                 className={`px-3 py-1.5 rounded-xl text-[10px] font-bold border transition-all ${
                                    isPrimary 
@@ -379,8 +388,8 @@ export default function CRMPage() {
                      <div className="relative">
                         <input 
                           type="date" 
-                          value={selectedLead.nextFollowUpAt || ''}
-                          onChange={e => updateLead(selectedLead.id, { nextFollowUpAt: e.target.value })}
+                          value={selectedLead.next_follow_up_at || ''}
+                          onChange={e => updateLead(selectedLead.id, { next_follow_up_at: e.target.value })}
                           className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:border-custom-blue outline-none transition-all shadow-lg"
                         />
                         <Calendar className="w-3.5 h-3.5 text-custom-blue absolute right-4 top-3.5" />
@@ -407,8 +416,8 @@ export default function CRMPage() {
                   <LeadPricingLedger 
                     leadId={selectedLead.id} 
                     initialItems={selectedLead.items}
-                    initialTransportation={selectedLead.transportationCharges}
-                    onSave={(items, transport, total) => updateLead(selectedLead.id, { items, transportationCharges: transport, totalValue: total })}
+                    initialTransportation={selectedLead.transportation_charges}
+                    onSave={(items, transport, total) => updateLead(selectedLead.id, { items, transportation_charges: transport, total_value: total })}
                   />
                </div>
 
@@ -436,7 +445,7 @@ export default function CRMPage() {
                         <h4 className="text-sm font-bold text-custom-blue flex items-center gap-2 uppercase tracking-wide">
                            <Package className="w-4 h-4" /> Successfully Converted
                         </h4>
-                        <p className="text-[10px] text-custom-blue/70 mt-1 uppercase font-black">Linked to Order ID: {selectedLead.convertedOrderId}</p>
+                        <p className="text-[10px] text-custom-blue/70 mt-1 uppercase font-black">Linked to Order ID: {selectedLead.converted_order_id}</p>
                      </div>
                      <div className="px-4 py-2 bg-custom-blue/20 text-custom-blue text-[10px] font-black rounded-lg uppercase">Closed Won</div>
                   </div>
@@ -453,17 +462,17 @@ export default function CRMPage() {
               {/* Header */}
               <div className="flex justify-between items-start border-b border-black pb-6 mb-6">
                 <div>
-                  <h1 className="text-4xl font-black uppercase tracking-tighter mb-1">{globalSettings.branding.companyName}</h1>
+                  <h1 className="text-4xl font-black uppercase tracking-tighter mb-1">{globalSettings.branding.company_name}</h1>
                   <p className="text-sm font-bold opacity-80 uppercase tracking-widest">Formal Commercial Proposal</p>
                   <p className="text-xs mt-4 w-64 leading-relaxed font-medium capitalize">
-                    {globalSettings.branding.companyName} Operations<br/>
+                    {globalSettings.branding.company_name} Operations<br/>
                     Professional HRMS & CRM Systems<br/>
                     Digital Quote Generated on {new Date().toLocaleDateString()}
                   </p>
                 </div>
                 <div className="text-right">
                   <div className="bg-black text-white px-6 py-2 text-xl font-black uppercase tracking-widest mb-4">LEAD QUOTATION</div>
-                  <p className="text-sm font-black">Ref: {selectedLead.ticketNumber}</p>
+                  <p className="text-sm font-black">Ref: {selectedLead.ticket_number}</p>
                   <p className="text-xs font-bold opacity-60">Status: {selectedLead.stage.toUpperCase()}</p>
                 </div>
               </div>
@@ -472,14 +481,14 @@ export default function CRMPage() {
               <div className="grid grid-cols-2 border border-black mb-8">
                 <div className="p-4 border-r border-black">
                   <p className="text-[10px] font-black uppercase mb-2 bg-black/5 p-1 w-fit">Supplier Details</p>
-                  <p className="text-sm font-bold">{globalSettings.branding.companyName}</p>
+                  <p className="text-sm font-bold">{globalSettings.branding.company_name}</p>
                   <p className="text-xs mt-1 leading-relaxed opacity-75">Generated via Enterprise CRM Suite</p>
                 </div>
                 <div className="p-4">
                   <p className="text-[10px] font-black uppercase mb-2 bg-black/5 p-1 w-fit">Prospective Customer</p>
-                  <p className="text-sm font-bold uppercase">{selectedLead.customerName}</p>
-                  <p className="text-xs mt-1 leading-relaxed opacity-75">{selectedLead.companyName || 'Individual Business Lead'}</p>
-                  <p className="text-xs mt-1 font-bold">GSTIN: {selectedLead.gstNumber || 'Not Provided'}</p>
+                  <p className="text-sm font-bold uppercase">{selectedLead.customer_name}</p>
+                  <p className="text-xs mt-1 leading-relaxed opacity-75">{selectedLead.company_name || 'Individual Business Lead'}</p>
+                  <p className="text-xs mt-1 font-bold">GSTIN: {selectedLead.gst_number || 'Not Provided'}</p>
                 </div>
               </div>
 
@@ -501,9 +510,9 @@ export default function CRMPage() {
                       <td className="p-3 text-left border-r border-black font-bold">{idx + 1}</td>
                       <td className="p-3 text-left border-r border-black font-black uppercase">{item.sku}</td>
                       <td className="p-3 text-right border-r border-black">{item.quantity}</td>
-                      <td className="p-3 text-right border-r border-black">₹{item.basePrice.toLocaleString()}</td>
-                      <td className="p-3 text-right border-r border-black text-[10px] font-bold">{item.gstPercent}%</td>
-                      <td className="p-3 text-right font-black">₹{((item.basePrice * item.quantity) - (item.basePrice * item.quantity * (item.discountPercent / 100))).toLocaleString()}</td>
+                      <td className="p-3 text-right border-r border-black">₹{item.base_price.toLocaleString()}</td>
+                      <td className="p-3 text-right border-r border-black text-[10px] font-bold">{item.gst_percent}%</td>
+                      <td className="p-3 text-right font-black">₹{((item.base_price * item.quantity) - (item.base_price * item.quantity * (item.discount_percent / 100))).toLocaleString()}</td>
                     </tr>
                   ))}
                   {/* Fill empty rows */}
@@ -525,19 +534,19 @@ export default function CRMPage() {
                 <div className="w-64 border border-black p-4 space-y-2">
                   <div className="flex justify-between text-xs font-bold">
                     <span>Subtotal</span>
-                    <span>₹{selectedLead.items.reduce((acc, i) => acc + (i.basePrice * i.quantity), 0).toLocaleString()}</span>
+                    <span>₹{selectedLead.items.reduce((acc, i) => acc + (i.base_price * i.quantity), 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-xs font-bold text-rose-800">
                     <span>Discounts</span>
-                    <span>- ₹{selectedLead.items.reduce((acc, i) => acc + (i.basePrice * i.quantity * (i.discountPercent / 100)), 0).toLocaleString()}</span>
+                    <span>- ₹{selectedLead.items.reduce((acc, i) => acc + (i.base_price * i.quantity * (i.discount_percent / 100)), 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-xs font-bold">
                     <span>Transportation</span>
-                    <span>₹{selectedLead.transportationCharges.toLocaleString()}</span>
+                    <span>₹{selectedLead.transportation_charges.toLocaleString()}</span>
                   </div>
                   <div className="border-t border-black pt-2 flex justify-between text-lg font-black bg-black text-white px-2 py-1">
                     <span>Total (₹)</span>
-                    <span>{selectedLead.totalValue.toLocaleString()}</span>
+                    <span>{selectedLead.total_value.toLocaleString()}</span>
                   </div>
                 </div>
               </div>
@@ -549,7 +558,7 @@ export default function CRMPage() {
                   <p className="text-[10px] font-bold uppercase">Customer Sign</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-[10px] font-black uppercase mb-12">For {globalSettings.branding.companyName}</p>
+                  <p className="text-[10px] font-black uppercase mb-12">For {globalSettings.branding.company_name}</p>
                   <div className="w-32 border-b border-black mb-2" />
                   <p className="text-[10px] font-bold uppercase">Authorized Signatory</p>
                 </div>

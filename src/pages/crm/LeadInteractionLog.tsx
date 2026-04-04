@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
   MessageCircle, Phone, Mail, 
   Users, StickyNote, Plus, Send,
-  Calendar, Clock, User
+  User
 } from 'lucide-react';
 import { CRMLead, CRMInteraction } from '../../types';
 import { useCRM } from '../../contexts/CRMContext';
@@ -34,12 +34,12 @@ export default function LeadInteractionLog({ lead }: Props) {
       id: Date.now().toString(),
       type,
       note: note.trim(),
-      createdBy: session.currentUser?.name || 'System',
-      createdAt: new Date().toISOString()
+      created_by: session.currentUser?.name || 'System',
+      created_at: new Date().toISOString()
     };
 
     const interactions = [...(lead.interactions || []), newInteraction];
-    await updateLead(lead.id, { interactions, lastContactedAt: new Date().toISOString() });
+    await updateLead(lead.id, { interactions, last_contacted_at: new Date().toISOString() });
     setNote('');
     setIsAdding(false);
   };
@@ -111,12 +111,12 @@ export default function LeadInteractionLog({ lead }: Props) {
                     <span className="text-[10px] font-black text-slate-300 uppercase tracking-tight">{item.type}</span>
                   </div>
                   <span className="text-[9px] font-bold text-slate-600 uppercase">
-                    {new Date(item.createdAt).toLocaleDateString()} · {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(item.created_at).toLocaleDateString()} · {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
                 <p className="text-xs text-slate-400 leading-relaxed">{item.note}</p>
                 <div className="mt-3 pt-3 border-t border-slate-800/50 flex items-center gap-2 text-[9px] font-black text-slate-600 uppercase tracking-widest">
-                  <User className="w-3 h-3" /> Logged By {item.createdBy}
+                  <User className="w-3 h-3" /> Logged By {item.created_by}
                 </div>
               </div>
             </div>

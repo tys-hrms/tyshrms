@@ -10,12 +10,12 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
     const root = document.documentElement;
     
     // Convert hex to HSL or just use hex (Tailwind can handle hex if configured with vars)
-    root.style.setProperty('--color-primary', branding.primaryColor);
-    root.style.setProperty('--color-secondary', branding.secondaryColor);
-    root.style.setProperty('--color-accent', branding.accentColor);
+    root.style.setProperty('--color-primary', branding.primary_color);
+    root.style.setProperty('--color-secondary', branding.secondary_color);
+    root.style.setProperty('--color-accent', branding.accent_color);
 
     // Handle Dark/Light Mode Class
-    if (branding.themeMode === 'dark') {
+    if (branding.theme_mode === 'dark') {
       root.classList.add('dark');
       root.style.colorScheme = 'dark';
     } else {

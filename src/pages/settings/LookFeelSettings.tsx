@@ -10,7 +10,7 @@ export default function LookFeelSettings() {
   const [isSaving, setIsSaving] = useState(false);
 
   const applyTheme = (mode: 'light' | 'dark') => {
-    const updated = { ...formData, themeMode: mode };
+    const updated = { ...formData, theme_mode: mode };
     setFormData(updated);
     updateBranding(updated);
     setShowSuccess(true);
@@ -30,11 +30,12 @@ export default function LookFeelSettings() {
 
   const resetToDefault = () => {
     const defaults = {
-      companyName: 'HRMSCore',
-      primaryColor: '#2d7cf6',
-      secondaryColor: '#14b8a6',
-      accentColor: '#f59e0b',
-      themeMode: 'dark' as const,
+      company_name: 'HRMSCore',
+      logo_url: '',
+      primary_color: '#2d7cf6',
+      secondary_color: '#14b8a6',
+      accent_color: '#f59e0b',
+      theme_mode: 'dark' as const,
     };
     setFormData(defaults);
     updateBranding(defaults);
@@ -55,16 +56,16 @@ export default function LookFeelSettings() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <button 
             onClick={() => applyTheme('light')}
-            className={`p-6 rounded-2xl border-2 flex flex-col items-center gap-3 transition-all ${formData.themeMode === 'light' ? 'bg-white border-custom-blue text-slate-900 shadow-xl shadow-custom-blue/20' : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'}`}
+            className={`p-6 rounded-2xl border-2 flex flex-col items-center gap-3 transition-all ${formData.theme_mode === 'light' ? 'bg-white border-custom-blue text-slate-900 shadow-xl shadow-custom-blue/20' : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'}`}
           >
-            <Sun className={`w-8 h-8 ${formData.themeMode === 'light' ? 'text-amber-500' : ''}`} />
+            <Sun className={`w-8 h-8 ${formData.theme_mode === 'light' ? 'text-amber-500' : ''}`} />
             <span className="text-xs font-black uppercase tracking-widest">Light Mode</span>
           </button>
           <button 
             onClick={() => applyTheme('dark')}
-            className={`p-6 rounded-2xl border-2 flex flex-col items-center gap-3 transition-all ${formData.themeMode === 'dark' ? 'bg-slate-800 border-custom-blue text-white shadow-xl shadow-custom-blue/20' : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'}`}
+            className={`p-6 rounded-2xl border-2 flex flex-col items-center gap-3 transition-all ${formData.theme_mode === 'dark' ? 'bg-slate-800 border-custom-blue text-white shadow-xl shadow-custom-blue/20' : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'}`}
           >
-            <Moon className={`w-8 h-8 ${formData.themeMode === 'dark' ? 'text-amber-300' : ''}`} />
+            <Moon className={`w-8 h-8 ${formData.theme_mode === 'dark' ? 'text-amber-300' : ''}`} />
             <span className="text-xs font-black uppercase tracking-widest">Dark Mode</span>
           </button>
         </div>
@@ -84,25 +85,25 @@ export default function LookFeelSettings() {
           <div className="space-y-4">
             <ColorPicker 
               label="Primary Color" 
-              value={formData.primaryColor} 
-              onChange={v => setFormData({...formData, primaryColor: v})} 
+              value={formData.primary_color} 
+              onChange={v => setFormData({...formData, primary_color: v})} 
             />
             <ColorPicker 
               label="Secondary Color" 
-              value={formData.secondaryColor} 
-              onChange={v => setFormData({...formData, secondaryColor: v})} 
+              value={formData.secondary_color} 
+              onChange={v => setFormData({...formData, secondary_color: v})} 
             />
             <ColorPicker 
               label="Accent Highlight" 
-              value={formData.accentColor} 
-              onChange={v => setFormData({...formData, accentColor: v})} 
+              value={formData.accent_color} 
+              onChange={v => setFormData({...formData, accent_color: v})} 
             />
           </div>
 
           <div className="mt-8 p-4 rounded-2xl bg-slate-950 border border-dashed border-slate-800 flex justify-center gap-4">
-            <div className="w-10 h-10 rounded-xl shadow-lg" style={{ backgroundColor: formData.primaryColor }} />
-            <div className="w-10 h-10 rounded-xl shadow-lg" style={{ backgroundColor: formData.secondaryColor }} />
-            <div className="w-10 h-10 rounded-xl shadow-lg" style={{ backgroundColor: formData.accentColor }} />
+            <div className="w-10 h-10 rounded-xl shadow-lg" style={{ backgroundColor: formData.primary_color }} />
+            <div className="w-10 h-10 rounded-xl shadow-lg" style={{ backgroundColor: formData.secondary_color }} />
+            <div className="w-10 h-10 rounded-xl shadow-lg" style={{ backgroundColor: formData.accent_color }} />
           </div>
         </div>
 
@@ -120,8 +121,8 @@ export default function LookFeelSettings() {
               <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">Company Name</label>
               <input 
                 type="text" 
-                value={formData.companyName}
-                onChange={e => setFormData({...formData, companyName: e.target.value})}
+                value={formData.company_name}
+                onChange={e => setFormData({...formData, company_name: e.target.value})}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:border-custom-blue outline-none"
               />
             </div>
@@ -131,8 +132,8 @@ export default function LookFeelSettings() {
                 <ImageIcon className="w-4 h-4 text-slate-600 absolute left-4 top-1/2 -translate-y-1/2" />
                 <input 
                   type="text" 
-                  value={formData.logoUrl || ''}
-                  onChange={e => setFormData({...formData, logoUrl: e.target.value})}
+                  value={formData.logo_url || ''}
+                  onChange={e => setFormData({...formData, logo_url: e.target.value})}
                   placeholder="https://company.com/logo.png"
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-11 pr-4 py-3 text-white focus:border-custom-blue outline-none"
                 />

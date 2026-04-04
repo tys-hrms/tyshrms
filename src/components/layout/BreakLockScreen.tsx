@@ -17,13 +17,13 @@ export default function BreakLockScreen({ onEndBreak }: { onEndBreak: () => void
   const intervalRef = useRef<ReturnType<typeof setInterval>>();
 
   useEffect(() => {
-    if (session.breakStartTime) {
+    if (session.break_start_time) {
       intervalRef.current = setInterval(() => {
-        setElapsed(Date.now() - session.breakStartTime!);
+        setElapsed(Date.now() - session.break_start_time!);
       }, 1000);
     }
     return () => clearInterval(intervalRef.current);
-  }, [session.breakStartTime]);
+  }, [session.break_start_time]);
 
   const handleEndBreak = () => {
     endBreak();

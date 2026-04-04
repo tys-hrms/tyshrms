@@ -20,10 +20,10 @@ export function PayrollProvider({ children }: { children: React.ReactNode }) {
   const [salaryRecords, setSalaryRecords] = useState<SalaryRecord[]>([]);
 
   useEffect(() => {
-    if (!settings.mongodb.isEnabled || !session.tenant) return;
-    db.request('find', 'salary_records', { filter: { tenantId: session.tenant.id } })
+    if (!session.tenant?.id) return;
+    db.request('find', 'salary_records', { filter: { tenant_id: session.tenant.id } })
       .then(res => setSalaryRecords(res.documents || []));
-  }, [settings.mongodb.isEnabled, session.tenant]);
+  }, [session.tenant?.id]);
 
   const getRecordsByMonth = (month: string) => {
     return salaryRecords.filter(r => r.month === month);
@@ -32,24 +32,23 @@ export function PayrollProvider({ children }: { children: React.ReactNode }) {
   const isWeekend = (dateStr: string) => {
     const date = new Date(dateStr);
     const day = date.getDay();
-    return (settings.payrollSettings?.weekends || [0]).includes(day);
+    return (settings.payroll_settings?.weekends || [0]).includes(day);
   };
 
   const isHoliday = (dateStr: string) => {
-    return (settings.payrollSettings?.holidayList || []).some(h => h.date === dateStr && !h.isWorking);
+    return (settings.payroll_settings?.holiday_list || []).some((h: { date: string; isWorking: boolean }) => h.date === dateStr && !h.isWorking);
   };
 
   const processMonthlyPayroll = async (month: string) => {
+    const ps = settings.payroll_settings;
     const workers = users.filter(u => u.role === 'Worker');
     const newRecords: SalaryRecord[] = [];
     const [year, monthNum] = month.split('-').map(Number);
     const daysInMonth = new Date(year, monthNum, 0).getDate();
 
     for (const worker of workers) {
-      const userLogs = attendanceLogs.filter(l => l.userId === worker.id && l.date.startsWith(month));
+      const userLogs = attendanceLogs.filter(l => l.user_id === worker.id && l.date.startsWith(month));
       
-      // Payable days calculation:
-      // (Days Present) + (Weekend/Holiday credit if not explicitly absent)
       let payableDays = 0;
       for (let d = 1; d <= daysInMonth; d++) {
         const dateStr = `${month}-${String(d).padStart(2, '0')}`;
@@ -60,48 +59,44 @@ export function PayrollProvider({ children }: { children: React.ReactNode }) {
         } else if (log?.status === 'half_day') {
            payableDays += 0.5;
         } else if (!log || log.status === 'holiday') {
-           // If it's a weekend or a holiday and no 'absent' mark exists, it's paid
            if (isWeekend(dateStr) || isHoliday(dateStr)) {
              payableDays += 1;
            }
         }
       }
 
-      const dailyRate = worker.salaryStructure?.basic 
-        ? (worker.salaryStructure.basic / 26) 
-        : (worker.salaryDetails?.basicSalary ? (worker.salaryDetails.basicSalary / 26) : 500);
+      const dailyRate = worker.salary_structure?.basic 
+        ? (worker.salary_structure.basic / 26) 
+        : 500;
         
       const grossPay = payableDays * dailyRate;
       
-      // Statutory Calculations
-      const epf = settings.payrollSettings?.epfEnabled && (worker.salaryStructure?.isEpfMember ?? true) 
-        ? Math.round(grossPay * 0.12) : 0;
-      const esi = settings.payrollSettings?.esiEnabled && (worker.salaryStructure?.isEsiMember ?? true)
-        ? Math.round(grossPay * 0.0075) : 0; 
+      const epf = ps?.epf_enabled && (worker.salary_structure?.is_epf_member ?? true) 
+        ? Math.round(grossPay * ((ps?.epf_rate || 12) / 100)) : 0;
+      const esi = ps?.esi_enabled && (worker.salary_structure?.is_esi_member ?? true)
+        ? Math.round(grossPay * ((ps?.esi_rate || 0.75) / 100)) : 0; 
       
-      // Professional Tax (simplified for demo, usually state-specific)
-      const pt = settings.payrollSettings?.ptEnabled && grossPay > 10000 ? 200 : 0;
+      const pt = ps?.pt_enabled && grossPay > (ps?.pt_threshold || 10000) ? (ps?.pt_amount || 200) : 0;
 
       const record: SalaryRecord = {
-        id: crypto.randomUUID(),
-        tenantId: session.tenant?.id || 'default',
-        userId: worker.id,
+        id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2),
+        tenant_id: session.tenant?.id || 'default',
+        user_id: worker.id,
         month,
-        workingDays: payableDays,
-        grossPay: Math.round(grossPay),
-        epfDeduction: epf,
-        esiDeduction: esi,
-        ptDeduction: pt,
-        otherDeductions: 0,
-        netPay: Math.round(grossPay - epf - esi - pt),
-        status: 'draft',
-        createdAt: new Date().toISOString()
-      };
+        working_days: payableDays,
+        gross_pay: Math.round(grossPay),
+        epf_deduction: epf,
+        esi_deduction: esi,
+        pt_deduction: pt,
+        net_pay: Math.round(grossPay - epf - esi - pt),
+        status: 'pending',
+        created_at: new Date().toISOString()
+      } as SalaryRecord;
 
       newRecords.push(record);
     }
 
-    if (settings.mongodb.isEnabled) {
+    if (session.tenant?.id) {
       await db.saveMany('salary_records', newRecords);
     }
 
@@ -112,7 +107,7 @@ export function PayrollProvider({ children }: { children: React.ReactNode }) {
     const record = salaryRecords.find(r => r.id === id);
     if (!record) return;
     const updatedRecord = { ...record, ...updates };
-    if (settings.mongodb.isEnabled) {
+    if (session.tenant?.id) {
       await db.save('salary_records', updatedRecord);
     }
     setSalaryRecords(prev => prev.map(r => r.id === id ? updatedRecord : r));
@@ -122,16 +117,16 @@ export function PayrollProvider({ children }: { children: React.ReactNode }) {
     const records = getRecordsByMonth(month);
     const headers = ['Employee Name', 'Month', 'Working Days', 'Gross Pay', 'EPF', 'ESI', 'PT', 'Net Pay'];
     const rows = records.map(r => {
-      const user = users.find(u => u.id === r.userId);
+      const user = users.find(u => u.id === r.user_id);
       return [
         user?.name || 'Unknown',
         r.month,
-        r.workingDays,
-        r.grossPay,
-        r.epfDeduction,
-        r.esiDeduction,
-        r.ptDeduction,
-        r.netPay
+        r.working_days,
+        r.gross_pay,
+        r.epf_deduction,
+        r.esi_deduction,
+        r.pt_deduction,
+        r.net_pay
       ];
     });
 

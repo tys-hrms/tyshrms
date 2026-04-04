@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSettings } from '../../contexts/SettingsContext';
-import { Palette, Moon, Sun, Monitor, Check } from 'lucide-react';
+import { Moon, Sun, Monitor, Check } from 'lucide-react';
 
 export default function AppearanceSettings() {
   const { settings, updateBranding } = useSettings();
@@ -9,7 +9,7 @@ export default function AppearanceSettings() {
   const [showSuccess, setShowSuccess] = useState(false);
 
   const applyTheme = (mode: 'light' | 'dark') => {
-    const updated = { ...formData, themeMode: mode };
+    const updated = { ...formData, theme_mode: mode };
     setFormData(updated);
     updateBranding(updated);
     setShowSuccess(true);
@@ -37,16 +37,16 @@ export default function AppearanceSettings() {
          <div className="grid grid-cols-2 gap-6">
             <button 
                 onClick={() => applyTheme('light')}
-                className={`p-6 rounded-2xl border-2 flex flex-col items-center gap-4 transition-all ${formData.themeMode === 'light' ? 'bg-white border-custom-blue text-slate-900 shadow-xl shadow-custom-blue/20' : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'}`}
+                className={`p-6 rounded-2xl border-2 flex flex-col items-center gap-4 transition-all ${formData.theme_mode === 'light' ? 'bg-white border-custom-blue text-slate-900 shadow-xl shadow-custom-blue/20' : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'}`}
             >
-                <Sun className={`w-8 h-8 ${formData.themeMode === 'light' ? 'text-amber-500' : ''}`} />
+                <Sun className={`w-8 h-8 ${formData.theme_mode === 'light' ? 'text-amber-500' : ''}`} />
                 <span className="text-sm font-black uppercase tracking-widest">Light Mode</span>
             </button>
             <button 
                 onClick={() => applyTheme('dark')}
-                className={`p-6 rounded-2xl border-2 flex flex-col items-center gap-4 transition-all ${formData.themeMode === 'dark' ? 'bg-slate-800 border-custom-blue text-white shadow-xl shadow-custom-blue/20' : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'}`}
+                className={`p-6 rounded-2xl border-2 flex flex-col items-center gap-4 transition-all ${formData.theme_mode === 'dark' ? 'bg-slate-800 border-custom-blue text-white shadow-xl shadow-custom-blue/20' : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'}`}
             >
-                <Moon className={`w-8 h-8 ${formData.themeMode === 'dark' ? 'text-amber-300' : ''}`} />
+                <Moon className={`w-8 h-8 ${formData.theme_mode === 'dark' ? 'text-amber-300' : ''}`} />
                 <span className="text-sm font-black uppercase tracking-widest">Dark Mode</span>
             </button>
          </div>

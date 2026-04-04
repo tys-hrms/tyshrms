@@ -17,9 +17,7 @@ import {
   BaseEdge,
   EdgeLabelRenderer,
   getBezierPath,
-  EdgeProps,
-  NodeChange,
-  EdgeChange,
+  EdgeProps
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useAuth } from '../../contexts/AuthContext';
@@ -84,7 +82,6 @@ const GenericNode = ({ data, selected }: { data: any; selected?: boolean }) => {
 };
 
 // ─── Custom Deletable Edge ────────────────────────────────────────────────────
-// Uses a custom event so it doesn't need to call hooks inside a non-hook context
 
 const DeletableEdge = ({
   id,
@@ -134,7 +131,7 @@ const DeletableEdge = ({
   );
 };
 
-// ─── Node / Edge type maps (defined outside component to avoid re-creation) ──
+// ─── Node / Edge type maps ──
 
 const nodeTypes = {
   admin: GenericNode,
@@ -148,7 +145,7 @@ const edgeTypes = {
   deletable: DeletableEdge,
 };
 
-// ─── Icon helpers (not serialisable → resolved at runtime) ────────────────────
+// ─── Icon helpers ────────────────────
 
 function iconForRole(role: string) {
   if (role === 'Admin') return ShieldCheck;
@@ -191,8 +188,6 @@ export default function WorkflowBuilder() {
     setWorkflowEdges,
   } = useApp();
 
-  // ── Local ReactFlow state (decoupled from persistence) ──────────────────────
-  // This prevents every node drag from triggering MongoDB writes.
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
@@ -203,12 +198,11 @@ export default function WorkflowBuilder() {
   const [search, setSearch] = useState('');
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
-  // ── Hydrate from persisted state on mount only ──────────────────────────────
+  // ── Hydrate from persisted state on mount ──────────────────────────────
   useEffect(() => {
     if (initialized) return;
 
     if (persistedNodes && persistedNodes.length > 0) {
-      // Re-attach icons (functions aren't JSON-serialisable)
       const hydrated = persistedNodes.map((n: Node) => ({
         ...n,
         data: {
@@ -230,14 +224,13 @@ export default function WorkflowBuilder() {
       return;
     }
 
-    // No persisted state → auto-populate from active assignments
     if (assignments.length === 0) { setInitialized(true); return; }
 
     const activeUserIds = new Set(
-      assignments.filter(a => a.status !== 'completed').map(a => a.userId)
+      assignments.filter(a => a.status !== 'completed').map(a => a.user_id)
     );
     const activeTaskTypes = new Set(
-      assignments.filter(a => a.status !== 'completed').map(a => a.taskType)
+      assignments.filter(a => a.status !== 'completed').map(a => a.task_type)
     );
 
     const autoNodes: Node[] = [];
@@ -277,11 +270,11 @@ export default function WorkflowBuilder() {
     const autoEdges: Edge[] = assignments
       .filter(a => a.status !== 'completed')
       .map(a => {
-        const taskObj = taskDefinitions.find(t => t.name === a.taskType);
+        const taskObj = taskDefinitions.find(t => t.name === a.task_type);
         if (!taskObj) return null;
         return {
           id: `e-${a.id}`,
-          source: `worker-${a.userId}`,
+          source: `worker-${a.user_id}`,
           target: `task-${taskObj.id}`,
           type: 'deletable',
           animated: true,
@@ -294,7 +287,7 @@ export default function WorkflowBuilder() {
     setNodes(autoNodes);
     setEdges(autoEdges);
     setInitialized(true);
-  }, [persistedNodes, persistedEdges, assignments, taskDefinitions, users, initialized]); // eslint-disable-line
+  }, [persistedNodes, persistedEdges, assignments, taskDefinitions, users, initialized]);
 
   // ── Edge deletion via custom event ─────────────────────────────────────────
   useEffect(() => {
@@ -378,8 +371,6 @@ export default function WorkflowBuilder() {
   const handleDeploy = () => {
     setSaveStatus('saving');
 
-    // Persist layout to AppContext (→ MongoDB cloud)
-    // Strip non-serialisable icon functions before saving
     const serializableNodes = nodes.map(n => ({
       ...n,
       data: { ...n.data, icon: undefined },
@@ -387,27 +378,26 @@ export default function WorkflowBuilder() {
     setWorkflowNodes(serializableNodes);
     setWorkflowEdges(edges);
 
-    // Process Worker → Task connections into assignments
     const todayStr = new Date().toISOString().split('T')[0];
     edges.forEach(e => {
       if (e.source.startsWith('worker-') && e.target.startsWith('task-')) {
-        const userId = e.source.replace('worker-', '');
+        const user_id = e.source.replace('worker-', '');
         const taskId = e.target.replace('task-', '');
         const taskObj = taskDefinitions.find(t => t.id === taskId);
         if (taskObj) {
           const exists = assignments.some(
             a =>
-              a.userId === userId &&
-              a.taskType === taskObj.name &&
+              a.user_id === user_id &&
+              a.task_type === taskObj.name &&
               a.status !== 'completed'
           );
           if (!exists) {
             addAssignment({
               sku: 'VISUAL-BATCH',
-              userId,
-              taskType: taskObj.name as any,
+              user_id,
+              task_type: taskObj.name as any,
               date: todayStr,
-              targetQty: 100,
+              target_qty: 100,
             });
           }
         }
@@ -418,7 +408,6 @@ export default function WorkflowBuilder() {
     setTimeout(() => setSaveStatus('idle'), 3000);
   };
 
-  // ── Sidebar sections ───────────────────────────────────────────────────────
   const sections = [
     {
       id: 'workers',
@@ -459,7 +448,6 @@ export default function WorkflowBuilder() {
 
   return (
     <div className="flex gap-6 h-[800px] animate-in fade-in duration-700">
-      {/* ── Sidebar ─────────────────────────────────────────────────── */}
       <div className="w-80 flex flex-col gap-4">
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-col h-full overflow-hidden shadow-2xl">
           <div className="mb-6">
@@ -549,7 +537,6 @@ export default function WorkflowBuilder() {
         </div>
       </div>
 
-      {/* ── Workspace ────────────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col gap-4">
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-4 flex items-center justify-between shadow-xl">
           <div className="flex items-center gap-3">

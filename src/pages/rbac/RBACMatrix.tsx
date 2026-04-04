@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useRBAC } from '../../contexts/RBACContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { UserRole, AppModule, PermissionScope, RolePermission } from '../../types';
-import { Save, Check, Lock, Globe, MapPin, XCircle, ShieldCheck, Plus, X, Trash2, Edit2 } from 'lucide-react';
+import { UserRole, AppModule, RolePermission } from '../../types';
+import { Save, Check, Lock, ShieldCheck, Plus, X, Trash2, Edit2 } from 'lucide-react';
 
 export default function RBACMatrix() {
   const { session } = useAuth();
@@ -19,13 +19,12 @@ export default function RBACMatrix() {
     setTimeout(() => setIsSaved(false), 3000);
   };
 
-  const roles: UserRole[] = getAvailableRoles();
+  const roles = getAvailableRoles() as UserRole[];
   const modules: AppModule[] = ['dashboard', 'users', 'products', 'assignments', 'attendance', 'leaves', 'settings', 'rbac', 'reports', 'crm'];
-  const actions: ('view' | 'create' | 'edit' | 'delete')[] = ['view', 'create', 'edit', 'delete'];
 
   const isModuleEnabled = (role: UserRole, module: AppModule): boolean => {
     const perm = permissions.find(p => p.role === role && p.module === module);
-    return perm ? perm.viewScope !== 'none' : false;
+    return perm ? perm.view_scope !== 'none' : false;
   };
 
   const isFeatureEnabled = (role: UserRole, feature: keyof NonNullable<RolePermission['features']>): boolean => {
@@ -40,8 +39,6 @@ export default function RBACMatrix() {
     updatePermission(role, module, 'edit', newScope);
     updatePermission(role, module, 'delete', newScope);
   };
-
-
 
   return (
     <div className="space-y-6">
@@ -130,7 +127,6 @@ export default function RBACMatrix() {
         </div>
       )}
 
-
       <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[800px]">
@@ -149,9 +145,7 @@ export default function RBACMatrix() {
                           onClick={() => {
                             const newName = prompt(`Rename role "${role}" to:`, role);
                             if (newName && newName !== role) {
-                              // We'll need a renameRole in context
-                              // renameRole(role, newName);
-                              console.log('Rename role to', newName); // Placeholder for now or I'll add it to context
+                              console.log('Rename role to', newName);
                             }
                           }}
                           className="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg"
@@ -204,7 +198,7 @@ export default function RBACMatrix() {
 
               {/* Advanced Security Features Section */}
               <tr className="bg-slate-800/40">
-                <th colSpan={4} className="px-6 py-3 text-xs font-bold text-custom-blue uppercase tracking-widest border-y border-slate-700">
+                <th colSpan={roles.length + 1} className="px-6 py-3 text-xs font-bold text-custom-blue uppercase tracking-widest border-y border-slate-700">
                   Advanced Security Features
                 </th>
               </tr>
@@ -221,7 +215,7 @@ export default function RBACMatrix() {
                   </div>
                 </td>
                 {roles.map(role => {
-                  const isEnabled = isFeatureEnabled(role, 'biometricAllowed');
+                  const isEnabled = isFeatureEnabled(role, 'biometric_allowed');
                   const isDisabled = !isAdminSession;
                   return (
                     <td key={role} className="px-6 py-4 border-l border-slate-800 text-center">
@@ -230,7 +224,7 @@ export default function RBACMatrix() {
                           type="checkbox"
                           checked={isEnabled}
                           disabled={isDisabled}
-                          onChange={(e) => toggleFeature(role, 'biometricAllowed', e.target.checked)}
+                          onChange={(e) => toggleFeature(role, 'biometric_allowed', e.target.checked)}
                           className="w-5 h-5 rounded border-slate-700 bg-slate-800 text-custom-blue focus:ring-custom-blue focus:ring-offset-slate-900"
                         />
                         <span className={`text-[10px] font-bold ${isEnabled ? 'text-emerald-400' : 'text-slate-600'}`}>
@@ -253,7 +247,7 @@ export default function RBACMatrix() {
                   </div>
                 </td>
                 {roles.map(role => {
-                  const isEnabled = isFeatureEnabled(role, 'systemPrintAllowed');
+                  const isEnabled = isFeatureEnabled(role, 'system_print_allowed');
                   const isDisabled = !isAdminSession;
                   return (
                     <td key={role} className="px-6 py-4 border-l border-slate-800 text-center">
@@ -262,7 +256,7 @@ export default function RBACMatrix() {
                           type="checkbox"
                           checked={isEnabled}
                           disabled={isDisabled}
-                          onChange={(e) => toggleFeature(role, 'systemPrintAllowed', e.target.checked)}
+                          onChange={(e) => toggleFeature(role, 'system_print_allowed', e.target.checked)}
                           className="w-5 h-5 rounded border-slate-700 bg-slate-800 text-custom-blue focus:ring-custom-blue focus:ring-offset-slate-900"
                         />
                         <span className={`text-[10px] font-bold ${isEnabled ? 'text-amber-400' : 'text-slate-600'}`}>
@@ -285,7 +279,7 @@ export default function RBACMatrix() {
                   </div>
                 </td>
                 {roles.map(role => {
-                  const isEnabled = isFeatureEnabled(role, 'calculatorAllowed');
+                  const isEnabled = isFeatureEnabled(role, 'calculator_allowed');
                   const isDisabled = !isAdminSession;
                   return (
                     <td key={role} className="px-6 py-4 border-l border-slate-800 text-center">
@@ -294,7 +288,7 @@ export default function RBACMatrix() {
                           type="checkbox"
                           checked={isEnabled}
                           disabled={isDisabled}
-                          onChange={(e) => toggleFeature(role, 'calculatorAllowed', e.target.checked)}
+                          onChange={(e) => toggleFeature(role, 'calculator_allowed', e.target.checked)}
                           className="w-5 h-5 rounded border-slate-700 bg-slate-800 text-custom-blue focus:ring-custom-blue focus:ring-offset-slate-900"
                         />
                         <span className={`text-[10px] font-bold ${isEnabled ? 'text-purple-400' : 'text-slate-600'}`}>
@@ -317,7 +311,7 @@ export default function RBACMatrix() {
                   </div>
                 </td>
                 {roles.map(role => {
-                  const isEnabled = isFeatureEnabled(role, 'aiAssistantAllowed');
+                  const isEnabled = isFeatureEnabled(role, 'ai_assistant_allowed');
                   const isDisabled = !isAdminSession;
                   return (
                     <td key={role} className="px-6 py-4 border-l border-slate-800 text-center">
@@ -326,7 +320,7 @@ export default function RBACMatrix() {
                           type="checkbox"
                           checked={isEnabled}
                           disabled={isDisabled}
-                          onChange={(e) => toggleFeature(role, 'aiAssistantAllowed', e.target.checked)}
+                          onChange={(e) => toggleFeature(role, 'ai_assistant_allowed', e.target.checked)}
                           className="w-5 h-5 rounded border-slate-700 bg-slate-800 text-custom-blue focus:ring-custom-blue focus:ring-offset-slate-900"
                         />
                         <span className={`text-[10px] font-bold ${isEnabled ? 'text-custom-blue' : 'text-slate-600'}`}>
@@ -344,4 +338,3 @@ export default function RBACMatrix() {
     </div>
   );
 }
-

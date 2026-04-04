@@ -20,17 +20,15 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import ShopifySettings from './settings/ShopifySettings';
 import ShiftSettings from './settings/ShiftSettings';
-import MongoSettings from './settings/MongoSettings';
 import ProfileSettings from './settings/ProfileSettings';
 import LocationSettings from './settings/LocationSettings';
 import AutomationSettings from './settings/AutomationSettings';
 import LookFeelSettings from './settings/LookFeelSettings';
 import AISettings from './settings/AISettings';
-import CRMSettings from './settings/CRMSettings';
 import PayrollSettings from './settings/PayrollSettings';
 import DangerZone from './settings/DangerZone';
 
-type Tab = 'identity' | 'profile' | 'payroll' | 'shifts' | 'locations' | 'crm' | 'ai' | 'automation' | 'mongodb' | 'shopify' | 'danger';
+type Tab = 'identity' | 'profile' | 'payroll' | 'shifts' | 'locations' | 'ai' | 'automation' | 'shopify' | 'danger';
 
 interface SettingCategory {
   title: string;
@@ -72,7 +70,6 @@ export default function SettingsPage() {
         title: 'Operational Intelligence',
         icon: Zap,
         items: [
-          { id: 'crm', label: 'CRM Configuration', icon: Layers, description: 'Stages & Lifecycle' },
           { id: 'ai', label: 'AI Assistant', icon: Cpu, description: 'Automation & NLP' },
           { id: 'automation', label: 'Workflow Sync', icon: Clock, description: 'Background Tasks' }
         ]
@@ -81,7 +78,6 @@ export default function SettingsPage() {
         title: 'Advanced Infrastructure',
         icon: Database,
         items: [
-          { id: 'mongodb', label: 'Cloud Database', icon: ShieldCheck, description: 'Atlas Connectivity' },
           { id: 'shopify', label: 'Shopify Store', icon: Store, description: 'SKU Synchronization' }
         ]
       }
@@ -186,10 +182,8 @@ export default function SettingsPage() {
             {activeTab === 'payroll' && <PayrollSettings />}
             {activeTab === 'shifts' && <ShiftSettings />}
             {activeTab === 'locations' && <LocationSettings />}
-            {activeTab === 'crm' && <CRMSettings />}
             {activeTab === 'ai' && <AISettings />}
             {activeTab === 'automation' && <AutomationSettings />}
-            {activeTab === 'mongodb' && <MongoSettings />}
             {activeTab === 'shopify' && <ShopifySettings />}
             {activeTab === 'danger' && <DangerZone />}
           </div>
