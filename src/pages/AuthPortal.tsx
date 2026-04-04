@@ -114,7 +114,7 @@ export default function AuthPortal() {
               <h1 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
                 HRMSCore <span className="bg-slate-200 text-slate-600 text-[10px] px-2 py-0.5 rounded font-black tracking-normal self-center">v2.2.1-stable</span>
               </h1>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Enterprise Registration</p>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Registration Form</p>
             </div>
 
             {successResult ? (
@@ -235,7 +235,7 @@ export default function AuthPortal() {
                <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
                  HRMSCore <span className="bg-slate-200 text-slate-600 text-[10px] px-2 py-0.5 rounded font-black tracking-normal self-center">v2.2.1-stable</span>
                </h1>
-               <p className="text-[9px] text-slate-400 uppercase tracking-widest font-black mt-2">Identity Access Portal</p>
+               <p className="text-[9px] text-slate-400 uppercase tracking-widest font-black mt-2">User Access Portal</p>
              </div>
 
              <form onSubmit={handleLogin} className="space-y-4">
@@ -245,7 +245,7 @@ export default function AuthPortal() {
                   <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1">Workspace ID</span>
                   <div className="relative">
                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-300" />
-                     <input value={loginData.tenantId} onChange={x=>setLoginData(p=>({...p, tenantId:x.target.value}))} className="w-full bg-slate-50 border border-slate-200 p-2.5 pl-9 rounded text-xs font-mono shadow-inner outline-none focus:border-brand-500 transition-all" placeholder="Enter Tenant Code" />
+                     <input value={loginData.tenantId} onChange={x=>setLoginData(p=>({...p, tenantId:x.target.value}))} className="w-full bg-slate-50 border border-slate-200 p-2.5 pl-9 rounded text-xs font-mono shadow-inner outline-none focus:border-brand-500 transition-all" placeholder="Enter Tenant ID" />
                   </div>
                 </div>
 
@@ -283,7 +283,7 @@ export default function AuthPortal() {
       </div>
       
       <div className="py-4 text-center border-t border-slate-200 bg-slate-50">
-        <p className="text-[9px] text-slate-400 font-bold tracking-[0.6em] uppercase">HRMSCore Enterprise Suite v2.2.1-stable</p>
+        <p className="text-[9px] text-slate-400 font-bold tracking-[0.6em] uppercase">HRMSCore v2.2.1</p>
       </div>
 
       <style>{`
