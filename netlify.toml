@@ -24,11 +24,6 @@
   to = "/.netlify/functions/auth-register-verify"
   status = 200
 
-[[redirects]]
-  from = "/api/mongo"
-  to = "/.netlify/functions/mongo"
-  status = 200
-
 # Catch-all for SPA routing
 [[redirects]]
   from = "/*"
