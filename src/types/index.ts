@@ -100,7 +100,7 @@ export interface Product {
   unit: string;
   min_stock: number;
   created_at: string;
-  mongo_synced?: boolean;
+  is_synced?: boolean;
 }
 
 export interface Assignment {
