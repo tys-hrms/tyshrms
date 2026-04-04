@@ -80,18 +80,41 @@ interface SettingsContextType {
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const { session } = useAuth();
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [shifts, setShifts] = useState<Shift[]>(DEFAULT_SHIFTS);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<number>(Date.now());
 
+  // Recover tenant ID from storage to break circular dependency with useAuth
   useEffect(() => {
-    if (session?.tenant?.id) {
-       setSettings(prev => ({ ...prev, tenantId: session.tenant!.id }));
+    try {
+      const stored = sessionStorage.getItem('tys_hrms_session');
+      if (stored) {
+        const session = JSON.parse(stored);
+        if (session.tenant?.id) {
+          setSettings(prev => ({ ...prev, tenantId: session.tenant.id }));
+        }
+      }
+    } catch (e) {
+      console.warn('[Settings] Failed to recover tenant from storage:', e);
     }
-  }, [session?.tenant?.id]);
+  }, []);
+
+  // Also listen for storage changes (e.g. login/logout in other tabs)
+  useEffect(() => {
+    const handleStorage = () => {
+      const stored = sessionStorage.getItem('tys_hrms_session');
+      if (stored) {
+        const session = JSON.parse(stored);
+        if (session.tenant?.id && session.tenant.id !== settings.tenantId) {
+          setSettings(prev => ({ ...prev, tenantId: session.tenant.id }));
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, [settings.tenantId]);
 
   const loadCloudSettings = async () => {
     if (!settings.tenantId) return;

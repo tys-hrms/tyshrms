@@ -101,8 +101,8 @@ import ThemeProvider from './components/ThemeProvider';
 
 export default function App() {
   return (
-    <AuthProvider>
-      <SettingsProvider>
+    <SettingsProvider>
+      <AuthProvider>
         <ThemeProvider>
           <RBACProvider>
             <CRMProvider>
@@ -118,7 +118,7 @@ export default function App() {
             </CRMProvider>
           </RBACProvider>
         </ThemeProvider>
-      </SettingsProvider>
-    </AuthProvider>
+      </AuthProvider>
+    </SettingsProvider>
   );
 }
