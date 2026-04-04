@@ -121,17 +121,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
         fetchData('dispatches', [] as DispatchBatch[]),
       ]);
 
-      if (cProducts.length) setProducts(cProducts.map((p: Product) => ({ ...p, mongoSynced: true })));
-      if (cAssignments.length) setAssignments(cAssignments);
-      if (cLogs.length) setWorkLogs(cLogs);
-      if (cLeaves.length) setLeaves(cLeaves);
-      if (cTasks.length) setTasks(cTasks);
-      if (cDefects.length) setDefectReasons(cDefects);
-      if (cCarry.length) setCarryForwards(cCarry);
-      if (n.length) setNotifications(n);
-      if (cNodes.length) setWorkflowNodesState(cNodes);
-      if (cEdges.length) setWorkflowEdgesState(cEdges);
-      if (cDispatches.length) setDispatches(cDispatches);
+      setProducts(cProducts.map((p: Product) => ({ ...p, mongoSynced: true })));
+      setAssignments(cAssignments);
+      setWorkLogs(cLogs);
+      setLeaves(cLeaves);
+      setTasks(cTasks);
+      setDefectReasons(cDefects);
+      setCarryForwards(cCarry);
+      setNotifications(n);
+      setWorkflowNodesState(cNodes);
+      setWorkflowEdgesState(cEdges);
+      setDispatches(cDispatches);
       setLastSyncedAt(Date.now());
     } catch (e) {
       console.warn('[CloudSync] Global load error:', e);

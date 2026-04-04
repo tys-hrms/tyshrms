@@ -4,7 +4,7 @@
 import { MongoClient, ObjectId } from 'mongodb';
 
 const MONGODB_URI = process.env.MONGODB_URI || 
-  "mongodb://vnkt045_db_user:byU6RBdx6BMHrW6f@cluster0-shard-00-00.obki2is.mongodb.net:27017,cluster0-shard-00-01.obki2is.mongodb.net:27017,cluster0-shard-00-02.obki2is.mongodb.net:27017/hrmscore?ssl=true&replicaSet=atlas-m0-shard-0&authSource=admin&retryWrites=true&w=majority&appName=Cluster0";
+  "mongodb+srv://vnkt045_db_user:byU6RBdx6BMHrW6f@cluster0.obki2is.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 const DB_NAME = process.env.MONGODB_DB || "hrmscore";
 
 const ALLOWED_COLLECTIONS = new Set([
@@ -28,7 +28,14 @@ let cachedClient = null;
 async function getClient() {
   if (cachedClient) return cachedClient;
   if (!MONGODB_URI) throw new Error('MONGODB_URI environment variable is not set.');
-  const client = new MongoClient(MONGODB_URI);
+  
+  // Advanced options for serverless/Netlify stability
+  const client = new MongoClient(MONGODB_URI, {
+    connectTimeoutMS: 30000,
+    serverSelectionTimeoutMS: 30000,
+    socketTimeoutMS: 45000,
+  });
+  
   await client.connect();
   cachedClient = client;
   return client;
