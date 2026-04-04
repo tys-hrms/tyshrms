@@ -27,9 +27,9 @@ import PayrollPage from './pages/PayrollPage';
 
 // Temporary loading splash
 const LoadingSplash = ({ message = 'Initializing HRMSCore...' }: { message?: string }) => (
-  <div className="fixed inset-0 bg-slate-950 flex flex-col items-center justify-center z-50">
-    <div className="w-16 h-16 border-4 border-custom-blue/20 border-t-custom-blue rounded-full animate-spin mb-4" />
-    <p className="text-slate-400 font-medium animate-pulse">{message}</p>
+  <div className="fixed inset-0 bg-slate-50 flex flex-col items-center justify-center z-50">
+    <div className="w-16 h-16 border-4 border-custom-blue/5 border-t-custom-blue rounded-full animate-spin mb-4" />
+    <p className="text-slate-500 font-medium animate-pulse tracking-wide">{message}</p>
   </div>
 );
 
