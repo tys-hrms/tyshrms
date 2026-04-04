@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS tenants (
   branding JSONB DEFAULT '{"primaryColor": "#2d7cf6", "secondaryColor": "#14b8a6", "themeMode": "light"}'::JSONB,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   is_active BOOLEAN DEFAULT TRUE,
-  "companySlug" TEXT -- CamelCase for consistency with legacy code
+  "company_slug" TEXT NOT NULL UNIQUE
 );
 
 -- 3. CREATE USERS (Unified Auth)
