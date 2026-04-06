@@ -38,7 +38,7 @@ export default function ProductsPage() {
   const [sortConfig, setSortConfig] = useState<{ key: 'sku' | 'name'; direction: 'asc' | 'desc' } | null>({ key: 'name', direction: 'asc' });
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 15;
+  const itemsPerPage = 20;
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -67,21 +67,42 @@ export default function ProductsPage() {
     reader.onload = async (event) => {
       const text = event.target?.result as string;
       if (!text) return;
-      const rows = text.split('\n').map(row => row.split(','));
-      if (rows.length < 2) return;
+      const lines = text.split('\n').filter(l => l.trim());
+      if (lines.length < 2) return;
       
+      const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+      const getIdx = (name: string) => headers.indexOf(name);
+      
+      const hIdx = getIdx('Handle');
+      const sIdx = getIdx('Variant SKU');
+      const tIdx = getIdx('Title');
+      const qIdx = getIdx('Variant Inventory Qty');
+      const iIdx = getIdx('Image Src');
+
       const newProducts: any[] = [];
-      for (let i = 1; i < rows.length; i++) {
-        const [sku, name, qty] = rows[i];
-        if (sku && name) {
+      const seenHandles = new Set();
+      const tid = session.tenant?.id || '';
+
+      for (let i = 1; i < lines.length; i++) {
+        // Robust split handling quoted commas (simplified but effective for standard CSVs)
+        const row = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || lines[i].split(',');
+        const sku = row[sIdx]?.replace(/^"|"$/g, '') || '';
+        const name = row[tIdx]?.replace(/^"|"$/g, '') || '';
+        const handle = row[hIdx]?.replace(/^"|"$/g, '') || sku;
+        const qty = row[qIdx]?.replace(/^"|"$/g, '') || '0';
+        const img = row[iIdx]?.replace(/^"|"$/g, '') || '';
+
+        if (!seenHandles.has(handle) && sku && name) {
+          seenHandles.add(handle);
           newProducts.push({
             sku,
             name,
-            quantity: parseInt(qty || '0', 10),
+            quantity: parseInt(qty, 10),
             category: 'General',
             unit: 'Piece',
             min_stock: 0,
-            tenant_id: session.tenant?.id || '',
+            image_url: img,
+            tenant_id: tid,
           });
         }
       }
@@ -90,9 +111,12 @@ export default function ProductsPage() {
         setCsvUploading(true);
         try {
           await addProducts(newProducts);
-          setSyncSuccess(`✓ Imported ${newProducts.length} products.`);
+          setSyncSuccess(`✓ Imported ${newProducts.length} unique products.`);
+        } catch (err: any) {
+          setSyncError(`Import failed: ${err.message}`);
         } finally {
           setCsvUploading(false);
+          if (fileInputRef.current) fileInputRef.current.value = '';
         }
       }
     };

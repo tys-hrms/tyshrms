@@ -7,7 +7,8 @@ import { RBACProvider, useRBAC } from './contexts/RBACContext';
 import { CRMProvider } from './contexts/CRMContext';
 import { PayrollProvider } from './contexts/PayrollContext';
 
-import AuthPortal from './pages/AuthPortal';
+import LoginPage from './pages/LoginPage';
+import RegistrationPage from './pages/RegistrationPage';
 import FirstRunPage from './pages/FirstRunPage';
 import AppShell from './components/layout/AppShell';
 
@@ -57,8 +58,14 @@ function AppRoutes() {
   if (settingsLoading || rbacLoading) return <LoadingSplash message="Syncing System Settings..." />;
 
   // Auth & Discovery Logic
-  if (location.pathname === '/register' || !session.tenant || !session.currentUser) {
-    return <AuthPortal />;
+  if (!session.tenant || !session.currentUser) {
+    return (
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegistrationPage />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    );
   }
 
   // Redirect root / to slug-based dashboard
